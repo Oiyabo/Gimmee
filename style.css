@@ -1,0 +1,194 @@
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0f172a;
+    color: #e2e8f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.game {
+    width: 1100px;
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+h1 {
+    text-align: center;
+    margin: 0;
+}
+
+.set-info {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #facc15;
+    margin-bottom: 10px;
+}
+
+.battlefield {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.team {
+    width: 48%;
+}
+
+.team h2 {
+    text-align: center;
+}
+
+.character {
+    background: #334155;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    position: relative;
+}
+
+.hp-bar {
+    height: 14px;
+    background: #475569;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.hp-fill {
+    height: 100%;
+    background: #22c55e;
+    width: 100%;
+    transition: width 0.15s linear;
+}
+
+.dead {
+    opacity: 0.35;
+}
+
+.status {
+    font-size: 11px;
+    color: #facc15;
+}
+
+.log {
+    margin-top: 15px;
+    background: #0f172a;
+    padding: 10px;
+    height: 170px;
+    overflow-y: auto;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.controls {
+    text-align: center;
+    margin-top: 10px;
+}
+
+button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+/* ===== SHOP MODAL ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+    max-height: 80vh;
+    overflow-y: auto;
+    width: 600px;
+}
+
+.modal-content h2 {
+    text-align: center;
+    margin: 0 0 20px 0;
+    color: #facc15;
+}
+
+.hero-stats-list {
+    background: #334155;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.hero-stats-list div {
+    margin: 5px 0;
+}
+
+.upgrade-options {
+    margin: 20px 0;
+}
+
+.upgrade-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.upgrade-item {
+    background: #334155;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.upgrade-item button {
+    width: 100%;
+    padding: 6px;
+    margin-top: 8px;
+    font-size: 11px;
+}
+
+.upgrade-item button:disabled {
+    background: #64748b;
+    cursor: not-allowed;
+}
+
+.btn-continue {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 20px;
+    font-size: 16px;
+    background: #22c55e;
+}
+
+.btn-continue:hover {
+    background: #16a34a;
+}

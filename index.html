@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Automatic Battle RPG - 3v3 Skill System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <div class="game">
+      <h1>⚔ 3v3 Automatic Battle - Set System</h1>
+      <div id="set-info" class="set-info">Set 1</div>
+      <div class="battlefield">
+        <div class="team">
+          <h2>Heroes</h2>
+          <div id="heroes"></div>
+        </div>
+        <div class="team">
+          <h2>Monsters</h2>
+          <div id="monsters"></div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="start-btn" onclick="startBattle()">Start Battle</button>
+      </div>
+      <div class="log" id="battle-log"></div>
+    </div>
+    
+    <!-- Shop Modal -->
+    <div id="shop-modal" class="modal">
+      <div class="modal-content">
+        <h2>⭐ Upgrade Stats</h2>
+        <div id="hero-stats" class="hero-stats-list"></div>
+        <div class="upgrade-options">
+          <div id="upgrade-list"></div>
+        </div>
+        <button class="btn-continue" onclick="startNextSet()">➡ Lanjut Set Berikutnya</button>
+      </div>
+    </div>
+  </body>
+</html>
