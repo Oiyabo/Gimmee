@@ -24,17 +24,17 @@ perubahan UI Profile (stats dan equipment):
 sistem skill dan equipment baru:
 - skill hanya memiliki empat slot skill aktif (berarti pengguna harus memilih skill mana yang bisa dipakai tiap karakter).
 - equipment hanya punya 7 slot untuk bisa dipakai karakter.
-- skill dan equipment hanya bisa diganti di saat Rest.
+- skill dan equipment hanya bisa diganti di saat quick-rest.
 
 perubahan saat pergantian round atau area:
 - pop up "Round/Area Pause Modal" tidak akan muncul lagi melayang di tengah melainkan akan menimpa tab Profile sebagai eqChoice dan skChoice.
 - eqChoice akan memunculkan tiga item random (dari heroes random juga) dan pengguna hanya bisa memilih satu.
 - skChoice akan memunculkan tiga skill random (dari heroes random juga) dan pengguna hanya bisa memilih satu.
-- battle akan terpause jika pengguna belum memilih equipment atau skill.
+- battle akan tetap terpause jika pengguna belum memilih equipment atau skill.
 
 setting yang bisa di atur pengguna:
-- apakah akan otomatis memilih equipment saat eqChoice. jika iya maka, akan ada pilihan untuk tidak otomatis pause saat pergantian Round.
-- apakah akan otomatis memilih skill saat skChoice. jika iya maka, akan ada pilihan untuk tidak otomatis pause saat pergantian Area.
+- apakah akan otomatis memilih equipment saat eqChoice. jika iya maka, akan ada pilihan untuk tidak otomatis pause saat quick-rest.
+- apakah akan otomatis memilih skill saat skChoice. jika iya maka, akan ada pilihan untuk tidak otomatis pause saat long-rest.
 
 perubahan UI battle-log:
 - ubah jadi tab kecil di luar viewed screen disebelah kiri.
