@@ -1,55 +1,270 @@
 class Character {
-  constructor(name, hp, atk, def, spd, team, skills) {
+  constructor(name, stats, team, skills = []) {
     this.name = name;
-    this.maxHp = hp;
-    this.hp = hp;
-    this.atk = atk;
-    this.origAtk = atk;
-    this.def = def;
-    this.origDef = def;
-    this.spd = spd;
-    this.origSpd = spd;
     this.team = team;
-    this.skills = skills;
-    this.learnedSkills = [];
-    this.cooldown = 0;
-    this.status = { 
-      burn: 0, 
-      shield: false, 
-      bleeding: 0, 
-      stun: 0, 
-      paralyzed: 0, 
-      taunt: false, 
-      critical: 0, 
-      buffed: 0,
-      buffStats: { atk: 0, def: 0, spd: 0 }
+    
+    // ===== CORE STATS =====
+    this.maxHp = stats.maxHp || 100;
+    this.hp = this.maxHp;
+    this.maxSta = stats.maxSta || 50;
+    this.sta = this.maxSta;
+    this.maxMana = stats.maxMana || 50;
+    this.mana = this.maxMana;
+    
+    // ===== COMBAT STATS =====
+    this.patk = stats.patk || 10; // Physical Attack
+    this.matk = stats.matk || 10; // Magical Attack
+    this.pdef = stats.pdef || 5;  // Physical Defense
+    this.mdef = stats.mdef || 5;  // Magical Defense
+    this.tatt = stats.tatt || 0;  // True Attack (ignores defense)
+    
+    // ===== SPEED STATS =====
+    this.pspd = stats.pspd || 1.0; // Physical Speed (cooldown reduction)
+    this.mspd = stats.mspd || 1.0; // Mind Speed (cooldown reduction)
+    
+    // ===== CRITICAL STATS =====
+    this.ccrit = stats.ccrit || 0.05; // Critical Chance
+    this.dcrit = stats.dcrit || 1.5;  // Critical Damage multiplier
+    
+    // ===== SKILL & EQUIPMENT SYSTEM =====
+    this.skills = skills; // All available skills
+    this.activeSkills = []; // Active skill slots (max 4)
+    this.equipment = []; // Equipped items (max 7)
+    this.inventory = []; // Equipment inventory
+    
+    // ===== STAT BONUSES =====
+    this.statBonus = {
+      maxHp: 0, maxSta: 0, maxMana: 0,
+      patk: 0, matk: 0, pdef: 0, mdef: 0,
+      tatt: 0, pspd: 0, mspd: 0, ccrit: 0, dcrit: 0
     };
-    this.equipment = [];
-    this.statsBonus = { atk: 0, def: 0, spd: 0, hp: 0 };
+    
+    // ===== EXPERIENCE & STAT PURCHASES =====
+    this.experience = 0;
+    this.statsLevel = {
+      maxHp: 0, maxSta: 0, maxMana: 0,
+      patk: 0, matk: 0, pdef: 0, mdef: 0
+    };
+    
+    // ===== STATUS EFFECTS =====
+    this.status = {
+      // Negative Effects
+      burn: 0,
+      bleeding: 0,
+      stun: 0,
+      paralyzed: 0,
+      vampired: 0,
+      confused: 0,
+      // Positive Effects
+      shield: { active: false, duration: 0 },
+      dodge: { active: false, duration: 0, countRemaining: 0 },
+      taunt: { active: false, duration: 0 },
+      regeneration: { active: false, duration: 0, hpPerSecond: 0 },
+      buffed: { active: false, duration: 0, stats: {} }
+    };
+    
+    // ===== POSITIONING =====
+    this.gridX = 0;
+    this.gridY = 0;
+    this.isDead = false;
+    
+    // ===== UI REFERENCES =====
     this.element = null;
     this.hpFill = null;
+    this.hpStroke = null;
   }
+
+  // ===== CORE METHODS =====
   isAlive() {
-    console.log(this.name, this.hp);
-    return this.hp > 0;
+    return this.hp > 0 && !this.isDead;
   }
-  takeDamage(amount) {
-    if (this.status.shield) {
-      this.status.shield = false;
-      updateStatusUI(this);
+
+  getEffectiveDefense(damageType = "physical") {
+    if (damageType === "physical") {
+      return Math.max(0, this.pdef + this.statBonus.pdef);
+    } else if (damageType === "magical") {
+      return Math.max(0, this.mdef + this.statBonus.mdef);
+    }
+    return 0;
+  }
+
+  getEffectiveAttack(attackType = "physical") {
+    if (attackType === "physical") {
+      return this.patk + this.statBonus.patk;
+    } else if (attackType === "magical") {
+      return this.matk + this.statBonus.matk;
+    }
+    return 0;
+  }
+
+  takeDamage(amount, damageType = "physical") {
+    // Check for dodge
+    if (this.status.dodge.active && Math.random() < CONFIG.ABILITIES.DODGE.dodgeChance) {
+      this.status.dodge.countRemaining--;
+      if (this.status.dodge.countRemaining <= 0) {
+        this.status.dodge.active = false;
+      }
       return 0;
     }
-    let dmg = Math.max(0, amount - this.def);
+
+    // Calculate damage based on defense
+    let defense = this.getEffectiveDefense(damageType);
+    let dmg = Math.max(0, amount - defense + (this.tatt + this.statBonus.tatt));
+    
     this.hp -= dmg;
     if (this.hp < 0) this.hp = 0;
+    
     updateHPUI(this);
-    updateDeadUI(this);
     return dmg;
   }
+
   heal(amount) {
-    this.hp += amount;
-    if (this.hp > this.maxHp) this.hp = this.maxHp;
+    this.hp = Math.min(this.maxHp + this.statBonus.maxHp, this.hp + amount);
     updateHPUI(this);
+  }
+
+  consumeStamina(amount) {
+    this.sta = Math.max(0, this.sta - amount);
+    return this.sta >= amount;
+  }
+
+  consumeMana(amount) {
+    this.mana = Math.max(0, this.mana - amount);
+    return this.mana >= amount;
+  }
+
+  restoreStamina(amount) {
+    this.sta = Math.min(this.maxSta + this.statBonus.maxSta, this.sta + amount);
+  }
+
+  restoreMana(amount) {
+    this.mana = Math.min(this.maxMana + this.statBonus.maxMana, this.mana + amount);
+  }
+
+  getGridDistance(other) {
+    return Math.max(
+      Math.abs(this.gridX - other.gridX),
+      Math.abs(this.gridY - other.gridY)
+    );
+  }
+
+  setGridPosition(x, y) {
+    this.gridX = x;
+    this.gridY = y;
+  }
+
+  equipItem(equipment) {
+    if (this.equipment.length < CONFIG.EQUIPMENT.EQUIP_SLOTS) {
+      this.equipment.push(equipment);
+      this.applyEquipmentBonus(equipment);
+      return true;
+    }
+    return false;
+  }
+
+  unequipItem(index) {
+    if (index >= 0 && index < this.equipment.length) {
+      let eq = this.equipment[index];
+      this.removeEquipmentBonus(eq);
+      this.equipment.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  applyEquipmentBonus(equipment) {
+    if (equipment.stats) {
+      for (let stat in equipment.stats) {
+        if (this.statBonus[stat] !== undefined) {
+          this.statBonus[stat] += equipment.stats[stat];
+        }
+      }
+    }
+  }
+
+  removeEquipmentBonus(equipment) {
+    if (equipment.stats) {
+      for (let stat in equipment.stats) {
+        if (this.statBonus[stat] !== undefined) {
+          this.statBonus[stat] -= equipment.stats[stat];
+        }
+      }
+    }
+  }
+
+  setActiveSkills(skillArray) {
+    this.activeSkills = skillArray.slice(0, CONFIG.SKILLS.ACTIVE_SLOTS);
+  }
+
+  purchaseStat(statName) {
+    let baseCost = CONFIG.STATS_PURCHASE.BASE_COST[statName];
+    let currentLevel = this.statsLevel[statName] || 0;
+    let cost = Math.ceil(baseCost * Math.pow(CONFIG.STATS_PURCHASE.COST_INCREASE, currentLevel));
+    
+    if (this.experience >= cost) {
+      this.experience -= cost;
+      this.statsLevel[statName]++;
+      
+      let increment = CONFIG.STATS_PURCHASE.STAT_INCREMENT[statName];
+      switch(statName) {
+        case "maxHp":
+          this.maxHp += increment;
+          this.hp += increment;
+          break;
+        case "maxSta":
+          this.maxSta += increment;
+          this.sta += increment;
+          break;
+        case "maxMana":
+          this.maxMana += increment;
+          this.mana += increment;
+          break;
+        case "patk":
+          this.patk += increment;
+          break;
+        case "matk":
+          this.matk += increment;
+          break;
+        case "pdef":
+          this.pdef += increment;
+          break;
+        case "mdef":
+          this.mdef += increment;
+          break;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  addExperience(amount) {
+    this.experience += amount;
+  }
+
+  getStatCost(statName) {
+    let baseCost = CONFIG.STATS_PURCHASE.BASE_COST[statName];
+    let currentLevel = this.statsLevel[statName] || 0;
+    return Math.ceil(baseCost * Math.pow(CONFIG.STATS_PURCHASE.COST_INCREASE, currentLevel));
+  }
+
+  getCurrentStats() {
+    return {
+      hp: this.hp,
+      maxHp: this.maxHp + this.statBonus.maxHp,
+      sta: this.sta,
+      maxSta: this.maxSta + this.statBonus.maxSta,
+      mana: this.mana,
+      maxMana: this.maxMana + this.statBonus.maxMana,
+      patk: this.patk + this.statBonus.patk,
+      matk: this.matk + this.statBonus.matk,
+      pdef: this.pdef + this.statBonus.pdef,
+      mdef: this.mdef + this.statBonus.mdef,
+      tatt: this.tatt + this.statBonus.tatt,
+      pspd: this.pspd + this.statBonus.pspd,
+      mspd: this.mspd + this.statBonus.mspd,
+      ccrit: this.ccrit + this.statBonus.ccrit,
+      dcrit: this.dcrit + this.statBonus.dcrit
+    };
   }
 }
 

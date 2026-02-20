@@ -1,18 +1,35 @@
-// ===== SKILL DEFINITIONS =====
+// ===== SKILL DEFINITIONS (REWORKED) =====
 const Skills = {
-  // === KNIGHT SKILLS ===
-  knightSlash: (self, allies, enemies) => {
-    let target = random(alive(enemies));
-    if (!target) return;
-    let dmg = target.takeDamage(Math.floor(self.atk * 1.2));
-    log(`${self.name} uses Knight Slash on ${target.name} (${dmg})`);
+  // ===== KNIGHT SKILLS =====
+  knightSlash: {
+    name: "Knight Slash",
+    type: "active",
+    category: "physical",
+    cost: { sta: 10 },
+    cooldown: 1.0,
+    description: "A strong melee attack that deals physical damage.",
+    execute: (caster, allies, enemies) => {
+      let target = getClosestEnemy(caster, enemies);
+      if (!target) return;
+      let dmg = calculateDamage(caster, target, "physical", 1.2);
+      target.takeDamage(dmg, "physical");
+      log(`${caster.name} uses Knight Slash on ${target.name} (${dmg} damage)`);
+    }
   },
-  shieldBarrier: (self, allies) => {
-    let target = random(alive(allies));
-    if (!target) return;
-    target.status.shield = true;
-    updateStatusUI(target);
-    log(`${self.name} casts Shield Barrier on ${target.name}`);
+
+  shieldBarrier: {
+    name: "Shield Barrier",
+    type: "passive",
+    category: "support",
+    description: "Grants team immunity to the next attack.",
+    execute: (caster, allies) => {
+      let targets = alive(allies).slice(0, 3);
+      targets.forEach(target => {
+        target.status.shield.active = true;
+        target.status.shield.duration = 1;
+      });
+      log(`${caster.name} casts Shield Barrier on ${targets.length} allies`);
+    }
   },
   moonswipe: (self, allies, enemies) => {
     let targets = alive(enemies).slice(0, 3);
