@@ -1,0 +1,13 @@
+tambahkan lebih banyak stats karakter dan beberapa perubahan fungsi:
+- maxHp (maximal health point)
+- Patk (physical attack)
+- Matk (magical attack)
+- Pdef (physical defense)
+- Mdef (magical defense)
+- Tatt (true attack; attack yang mengabaikan Pdef dan Mdef musuh)
+- Pspd (physical speed; scalling untuk mengurangi coldown skills berbasis fisik)
+- Mspd (mind speed; scalling untuk mengurangi coldown skills berbasis sihir)
+- Ccrit (critical chance)
+- Dcrit (critical damage; dalam persen, berapa persen damage kritikal yang di keluarkan)
+
+

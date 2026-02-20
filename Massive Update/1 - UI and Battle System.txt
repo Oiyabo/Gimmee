@@ -1,0 +1,18 @@
+perubahan besar di battlefield dari static menjadi dinamis map:
+- buat satu bagian map di sebelah kiri.
+- map nya terdiri dari 64 kotak dengan 8*8 kotak, saya sebut Placement-block.
+- tiap Placement-block bisa di isi oleh satu karakter.
+- karakter menjadi bentuk kotak mengikuti ukuran Placement-block.
+- kotak karakter (character-block) dikelilingi stroke merah yang mempresentasikan hp.
+- stroke merah mengikuti jumlah presentase hp (seperti jika hp 50% maka stroke hanya sampai setengah).
+- character-block heroes bisa di pindah ke Placement-block dengan cara di drag (hanya bisa dipindah dalam pergantian round dan area).
+
+perubahan UI Profile (stats dan equipment):
+- buat satu bagian UI Profile yang menggantikan Shop / Equipment Tab.
+- pencet character-block untuk membuka stats dan equipment karakter di tab Profile
+- hanya satu Profile yang dilihat, pencet character-block untuk mengganti tab Profile nya.
+- di Profile pengguna bisa equip dan unequip equipment, pilih skills yang bisa digunakan, dan beli stats dengan point-experience
+
+perubahan UI console:
+- ubah jadi tab kecil di luar viewed screen disebelah kiri.
+- ada tombol kecil yang bisa dipencet yang akan muncul tab console nya.
