@@ -13,10 +13,16 @@ battle system:
 - kemunculan musuh akan di random tapi terpusat di suatu bagian.
 - di awal atau setiap ganti ronde, akan ada satu sisi (dari delapan mata angin) arah musuh munculnya.
 - misal dari timur, musuh akan lebih terpusat di bagian kanan (begitu juga jika tenggara, musuh akan lebih terpusat di pojok kanan bawah).
-- pergantian round akan disbut quick-rest, dan pergantian area akan disebut long-rest
+
+Rest sistem:
+- setiap pergantian Round akan melakukan quick-rest.
+- setiap pergantian Area akan melakukan long-rest.
+- quick-rest akan menyembuhkan (25% hp + 2*set)
+- long-rest akan menyembuhkan total (sampai maks hp) serta mengahpus semua negative effect
+- kegiatan mengganti equipment atau skill dan enhance equipment hanya bisa dilakukan saat quick-rest ataupun long-rest (kecuali buy sistem)
 
 perubahan UI Profile (stats dan equipment):
-- buat satu bagian UI Profile yang menggantikan Shop / Equipment Tab.
+- buat satu bagian UI Profile yang menggantikan "Shop / Equipment Tab".
 - pencet character-block untuk membuka stats dan equipment karakter di tab Profile
 - hanya satu Profile yang dilihat, pencet character-block untuk mengganti tab Profile nya.
 - di Profile pengguna bisa equip dan unequip equipment, pilih skills yang bisa digunakan, dan beli stats dengan point-experience.
@@ -25,11 +31,12 @@ sistem skill dan equipment baru:
 - skill hanya memiliki empat slot skill aktif (berarti pengguna harus memilih skill mana yang bisa dipakai tiap karakter).
 - equipment hanya punya 7 slot untuk bisa dipakai karakter.
 - skill dan equipment hanya bisa diganti di saat quick-rest.
+- enhance, mengobarkan equipment lain untuk meningkatkan stats equipment (scalling tergantung kelangkahan equipment)
 
 perubahan saat pergantian round atau area:
 - pop up "Round/Area Pause Modal" tidak akan muncul lagi melayang di tengah melainkan akan menimpa tab Profile sebagai eqChoice dan skChoice.
 - eqChoice akan memunculkan tiga item random (dari heroes random juga) dan pengguna hanya bisa memilih satu.
-- skChoice akan memunculkan tiga skill random (dari heroes random juga) dan pengguna hanya bisa memilih satu.
+- skChoice akan memunculkan tiga skill random (dari heroes random juga) dan pengguna hanya bisa memilih satu (bisa muncul skill yang sudah dimiliki, jika dipilih akan menguatkan scalling skill.
 - battle akan tetap terpause jika pengguna belum memilih equipment atau skill.
 
 setting yang bisa di atur pengguna:
@@ -39,4 +46,3 @@ setting yang bisa di atur pengguna:
 perubahan UI battle-log:
 - ubah jadi tab kecil di luar viewed screen disebelah kiri.
 - ada tombol kecil yang bisa dipencet yang akan muncul tab console nya.
-
