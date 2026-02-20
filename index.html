@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Automatic Battle RPG - 3v3 Skill System</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
+    <script src="js/preparation.js" defer></script>
+    <script src="js/skills.js" defer></script>
+    <script src="js/heroes.js" defer></script>
+    <script src="js/monsterTemplate.js" defer></script>
+    <script src="js/equipment.js" defer></script>
+    <script src="js/UI.js" defer></script>
+    <script src="js/gameLoop.js" defer></script>
   </head>
   <body>
     <div class="game">
-      <h1>⚔ 3v3 Automatic Battle - Set System</h1>
-      <div id="set-info" class="set-info">Set 1</div>
+      <h1>⚔ Area > Round > Set Battle System</h1>
+      <div id="stage-info" class="stage-info">Area 1 - Round 1 - Set 1</div>
       <div class="battlefield">
         <div class="team">
           <h2>Heroes</h2>
@@ -23,19 +29,46 @@
       </div>
       <div class="controls">
         <button id="start-btn" onclick="startBattle()">Start Battle</button>
+        <button id="pause-btn" onclick="togglePause()" style="display:none;">⏸ Pause (SPACE)</button>
+        <button id="next-round-btn" style="display:none;" onclick="nextRound()">➡ Next Round</button>
       </div>
       <div class="log" id="battle-log"></div>
     </div>
-    
-    <!-- Shop Modal -->
-    <div id="shop-modal" class="modal">
+
+    <!-- Shop / Equipment Tab at Bottom -->
+    <div class="shop-tab-container">
+      <div class="shop-tabs">
+        <button class="shop-tab-btn active" onclick="switchTab('stats')">📊 Stats</button>
+        <button class="shop-tab-btn" onclick="switchTab('equipment')">⚔ Equipment</button>
+      </div>
+      <div id="stats-tab" class="shop-tab-content active">
+        <h3>Upgrade Stats</h3>
+        <div id="upgrade-list"></div>
+      </div>
+      <div id="equipment-tab" class="shop-tab-content">
+        <h3>Equipment Inventory</h3>
+        <div id="equipment-list"></div>
+      </div>
+    </div>
+
+    <!-- Round/Area Pause Modal -->
+    <div id="transition-modal" class="modal">
       <div class="modal-content">
-        <h2>⭐ Upgrade Stats</h2>
-        <div id="hero-stats" class="hero-stats-list"></div>
-        <div class="upgrade-options">
-          <div id="upgrade-list"></div>
+        <h2 id="transition-title"></h2>
+        <div id="transition-rewards">
+          <p id="reward-text"></p>
+          <div id="reward-items"></div>
         </div>
-        <button class="btn-continue" onclick="startNextSet()">➡ Lanjut Set Berikutnya</button>
+        <button class="btn-continue" onclick="continueFromTransition()">➡ Continue</button>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameover-modal" class="modal">
+      <div class="modal-content">
+        <h2>💀 GAME OVER</h2>
+        <p id="gameover-text"></p>
+        <button class="btn-continue" onclick="resetGame()">Restart</button>
       </div>
     </div>
   </body>

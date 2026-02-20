@@ -4,9 +4,11 @@ body {
     background: #0f172a;
     color: #e2e8f0;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    justify-content: flex-start;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    padding-bottom: 300px;
 }
 
 .game {
@@ -15,11 +17,38 @@ body {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    margin-top: 20px;
 }
 
 h1 {
     text-align: center;
     margin: 0;
+}
+
+.stage-info {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #facc15;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.pause-indicator {
+    display: inline-block;
+    margin-left: 10px;
+    color: #ef4444;
+    font-size: 14px;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0.3;
+    }
 }
 
 .set-info {
@@ -51,6 +80,13 @@ h1 {
     margin-bottom: 10px;
     font-size: 13px;
     position: relative;
+}
+
+.character-equipment {
+    font-size: 10px;
+    color: #60a5fa;
+    margin-top: 3px;
+    min-height: 12px;
 }
 
 .hp-bar {
@@ -100,13 +136,152 @@ button {
     color: white;
     font-weight: bold;
     cursor: pointer;
+    margin: 0 5px;
+    transition: all 0.2s;
 }
 
 button:hover {
     background: #2563eb;
 }
 
-/* ===== SHOP MODAL ===== */
+button:disabled {
+    background: #64748b;
+    cursor: not-allowed;
+}
+
+#pause-btn.paused {
+    background: #ef4444;
+    animation: pulse-red 1s infinite;
+}
+
+#pause-btn.paused:hover {
+    background: #dc2626;
+}
+
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* ===== SHOP TAB CONTAINER ===== */
+.shop-tab-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1e293b;
+    border-top: 2px solid #475569;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.shop-tabs {
+    display: flex;
+    background: #0f172a;
+    border-bottom: 1px solid #475569;
+}
+
+.shop-tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: #334155;
+    border: none;
+    color: #e2e8f0;
+    cursor: pointer;
+    border-radius: 0;
+    font-weight: bold;
+    margin: 0;
+}
+
+.shop-tab-btn.active {
+    background: #3b82f6;
+    color: white;
+}
+
+.shop-tab-btn:hover {
+    background: #2563eb;
+}
+
+.shop-tab-content {
+    display: none;
+    padding: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.shop-tab-content.active {
+    display: block;
+}
+
+.shop-tab-content h3 {
+    margin: 0 0 10px 0;
+    color: #facc15;
+}
+
+#upgrade-list, #equipment-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.upgrade-item, .equipment-item {
+    background: #334155;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 11px;
+    border: 1px solid #475569;
+}
+
+.upgrade-item {
+    border-left: 3px solid #3b82f6;
+}
+
+.equipment-item {
+    border-left: 3px solid #10b981;
+}
+
+.upgrade-item button, .equipment-item button {
+    width: 100%;
+    padding: 6px;
+    margin-top: 8px;
+    font-size: 10px;
+}
+
+.equipment-item-header {
+    font-weight: bold;
+    color: #60a5fa;
+    margin-bottom: 5px;
+}
+
+.equipment-item-rarity {
+    font-size: 9px;
+    color: #fbbf24;
+    margin-bottom: 5px;
+}
+
+.equipment-item-stats {
+    font-size: 9px;
+    color: #86efac;
+    margin: 5px 0;
+}
+
+.equipment-item-passive {
+    font-size: 9px;
+    color: #c084fc;
+    font-style: italic;
+    margin: 5px 0;
+}
+
+/* ===== MODALS ===== */
 .modal {
     display: none;
     position: fixed;
@@ -120,6 +295,10 @@ button:hover {
     align-items: center;
 }
 
+.modal.active {
+    display: flex;
+}
+
 .modal-content {
     background: #1e293b;
     padding: 30px;
@@ -128,56 +307,54 @@ button:hover {
     max-height: 80vh;
     overflow-y: auto;
     width: 600px;
+    text-align: center;
 }
 
 .modal-content h2 {
-    text-align: center;
     margin: 0 0 20px 0;
     color: #facc15;
 }
 
-.hero-stats-list {
+#transition-rewards {
     background: #334155;
     padding: 15px;
     border-radius: 8px;
-    margin-bottom: 20px;
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-.hero-stats-list div {
-    margin: 5px 0;
-}
-
-.upgrade-options {
     margin: 20px 0;
 }
 
-.upgrade-list {
+#transition-title {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+#reward-text {
+    font-size: 14px;
+    margin: 10px 0;
+}
+
+#reward-items {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
+    margin: 15px 0;
 }
 
-.upgrade-item {
-    background: #334155;
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-    font-size: 12px;
-    margin-bottom: 10px;
+.reward-item {
+    background: #1e293b;
+    padding: 10px;
+    border-radius: 6px;
+    border: 2px solid #10b981;
 }
 
-.upgrade-item button {
-    width: 100%;
-    padding: 6px;
-    margin-top: 8px;
+.reward-item-name {
+    font-weight: bold;
+    color: #60a5fa;
+    margin-bottom: 5px;
+}
+
+.reward-item-rarity {
     font-size: 11px;
-}
-
-.upgrade-item button:disabled {
-    background: #64748b;
-    cursor: not-allowed;
+    color: #fbbf24;
 }
 
 .btn-continue {
