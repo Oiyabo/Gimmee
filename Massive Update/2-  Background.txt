@@ -1,0 +1,50 @@
+tambahkan lebih banyak stats karakter dan beberapa perubahan fungsi:
+- maxHp (maximal health point)
+- maxSta (max stamina)
+- maxMana (max mana)
+- hp (point health)
+- sta (stamina; dibutuhkan untuk skill fisik, menggunakan skill fisik dibayar stamina)
+- mana (mana; dibutuhkan untuk skill sihir, menggunakan skill sihir dibayar mana)
+- Patk (physical attack)
+- Matk (magical attack)
+- Pdef (physical defense)
+- Mdef (magical defense)
+- Tatt (true attack; attack yang mengabaikan Pdef dan Mdef musuh)
+- Pspd (physical speed; scalling untuk mengurangi coldown skills berbasis fisik)
+- Mspd (mind speed; scalling untuk mengurangi coldown skills berbasis sihir)
+- Ccrit (critical chance)
+- Dcrit (critical damage; melipatkan output skills (damage atau heal) dalam hitungan persen (output + output*crit%))
+
+rombak skills:
+- rombak semua skill agar menggunakan stats baru di dalam fungsi skill nya.
+- identidikasi apa saja skills yang butuh dirombak agar menyesesuaikan stats baru.
+- rombak skill besar-besaran (nama, fungsi, serta berikan sedikit lore)
+
+ubah juga beberapa skill menjadi skill passive (skill nya mengaktifkan passive daripada mengeluarkan output) (passive ini bisa berjalan di latar belakang), seperti:
+- shieldBarrier (memberikan passive barier ke team, hilang setelah menahan satu serangan)
+- dodge (memberikan passive kemungkinan menghindari serangan musuh menjadi sangat tinggi, hilang menghindari 2-4 serangan)
+- taunt (membuat semua musuh hanya mengincar dirinya, hilang setelah 3-7 detik)
+- regeneration (heal over time)
+- dan lain-lain (identidikasi skill mana saja yang bisa menjadi skill passive, dan buatkan yang beberapa yang baru)
+
+rombak equipment:
+- equipment terdiri dari (1-3 bonus stats) dan special ability (0-1 random ability)
+- rombak semua equipment agar mengikuti format baru equipment
+- rombak skill besar-besaran (nama, format, dan buatkan lore singkat equipment)
+
+ability equipment:
+- sharpness (memberikan bleeding)
+- lightEssence (membuat musuh blind)
+- thorn (jika diserang musuh juga menerima damage)
+- shiny (membuat karakter jadi berkemungkinan kecil di serang musuh)
+- lightWeight (membuat konsumsi stamina menurun)
+- dan lain-lain (buatkan ability-ability lain, yang banyak serta mengambil segala aspek)
+
+negative effect status:
+- burn (Damage over Time lumayan tinggi)
+- bleeding (Damage over Time dan mengurangi Pspd)
+- stun (tidak bisa mengeluarkan skills apapun)
+- paralyzed (chance untuk batal mengeluarkan skills, lebih lama durasinya dari stun)
+- vampired (Drain hp over Time dan memberikan hp yang berurang ke musuh yang menyerang)
+- confused (big chance untuk menyerang teman sendiri daripada musuh)
+- dan lain-lain (buatkan effect-effect lain dan assign dengan (active/passive) skills atau ability equipment)

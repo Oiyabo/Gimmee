@@ -1,0 +1,16 @@
+mosnter spawning:
+- mosnter yang akan muncul juga akan di random stats dan skills (scalling dengan total area).
+- semakin besar dan kuat stats dan skills nya semakin besar juga experience-point yang diberikan.
+- sesuaikan perkembangan mosnter dengan difficulty (relax pertumbuhannya pelan, normal pertumbuhannya normal, focus pertumbuhannya cepat)
+
+kecepatan battle:
+- tempo battle terlalu cepat, manusia tidak bisa mengikuti battle nya
+- buat temapo battle lebih lambat agar mata manusia bisa mengikuti battlenya.
+
+sistem buy stats:
+- dibeli oleh experience-point yang di dapat dari mengalahkan musuh
+- setiap pembelian di satu stat akan menambahkan biaya pembelian selanjutnya
+
+penyesuaian variable:
+- buat agar aku mudah mengubah-ubah variable-variable krusial dengan mudah.
+- buat variable-variable itu berada di satu file khusus berguna untuk adjustment game.
