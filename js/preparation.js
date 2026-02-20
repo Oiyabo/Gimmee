@@ -22,6 +22,9 @@ class Character {
     this.pspd = stats.pspd || 1.0; // Physical Speed (cooldown reduction)
     this.mspd = stats.mspd || 1.0; // Mind Speed (cooldown reduction)
     
+    // ===== ACTION COOLDOWN =====
+    this.cooldown = 0; // Time remaining before next action
+    
     // ===== CRITICAL STATS =====
     this.ccrit = stats.ccrit || 0.05; // Critical Chance
     this.dcrit = stats.dcrit || 1.5;  // Critical Damage multiplier
@@ -99,7 +102,7 @@ class Character {
 
   takeDamage(amount, damageType = "physical") {
     // Check for dodge
-    if (this.status.dodge.active && Math.random() < CONFIG.ABILITIES.DODGE.dodgeChance) {
+    if (this.status.dodge && this.status.dodge.active && Math.random() < CONFIG.ABILITIES.DODGE.dodgeChance) {
       this.status.dodge.countRemaining--;
       if (this.status.dodge.countRemaining <= 0) {
         this.status.dodge.active = false;
@@ -282,6 +285,7 @@ let monsters = [];
 let isPaused = false;
 
 function log(t) {
+  if (!battleLog) return; // Safety check in case called before DOM ready
   let d = document.createElement("div");
   d.textContent = t;
   battleLog.appendChild(d);
@@ -304,19 +308,25 @@ function generateRandomMonster(setNumber, monsterTemplates) {
   
   let monster = new Character(
     name,
-    Math.floor(template.hp * scaling),
-    Math.floor(template.atk * scaling),
-    Math.floor(template.def * scaling),
-    template.spd * (1 + setNumber * 0.03),
+    {
+      maxHp: Math.floor(template.hp * scaling),
+      maxSta: 50,
+      maxMana: 30,
+      patk: Math.floor(template.atk * scaling),
+      matk: 10,
+      pdef: Math.floor(template.def * scaling),
+      mdef: 3,
+      tatt: 0,
+      pspd: template.spd * (1 + setNumber * 0.03),
+      mspd: 1.0,
+      ccrit: 0.1,
+      dcrit: 1.5
+    },
     "B",
-    [...template.skills]
+    [...(template.skills || [])]
   );
   
-  // Simpan original stats untuk reset
-  monster.maxHp = monster.hp;
-  monster.origAtk = monster.atk;
-  monster.origDef = monster.def;
-  monster.origSpd = monster.spd;
+  // Monsters don't need origAtk/origDef/origSpd (only used by old code)
   
   return monster;
 }
@@ -335,24 +345,32 @@ function generateBoss(round, area) {
   let areaName = getAreaName(area);
   let bossScale = 1.5 + (area * 0.3) + (round * 0.2);
   
-  let bossTemplates = BossTemplates[BaseAreas[area % 5]];
-  let templates = Object.entries(bossTemplates);
+  let bossArea = BaseAreas[area % 5] || "Forest";
+  let bossMonsters = getAreaMonstersTemplate(bossArea);
+  let templates = Object.entries(bossMonsters);
   let [name, template] = random(templates);
   
   let boss = new Character(
     `${name} (BOSS)`,
-    Math.floor(template.hp * bossScale),
-    Math.floor(template.atk * bossScale),
-    Math.floor(template.def * bossScale),
-    template.spd,
+    {
+      maxHp: Math.floor(template.hp * bossScale),
+      maxSta: 80,
+      maxMana: 50,
+      patk: Math.floor(template.atk * bossScale),
+      matk: 15,
+      pdef: Math.floor(template.def * bossScale),
+      mdef: 8,
+      tatt: 5,
+      pspd: (template.spd || 1.0) * 0.9,
+      mspd: 1.0,
+      ccrit: 0.15,
+      dcrit: 1.8
+    },
     "B",
-    [...template.skills]
+    [...(template.skills || [])]
   );
   
-  boss.maxHp = boss.hp;
-  boss.origAtk = boss.atk;
-  boss.origDef = boss.def;
-  boss.origSpd = boss.spd;
+  // Boss stats are set in constructor, no need for separate assignments
   
   return boss;
 }

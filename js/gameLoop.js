@@ -48,12 +48,10 @@ function applyStatus(char, delta) {
   }
 
   // Remove buff and restore stats
-  if (char.status.buffed > 0) {
-    char.status.buffed -= delta;
-    if (char.status.buffed <= 0) {
-      char.atk -= char.status.buffStats.atk;
-      char.def -= char.status.buffStats.def;
-      char.spd -= char.status.buffStats.spd;
+  if (char.status.buffed && char.status.buffed.active && char.status.buffed.duration > 0) {
+    char.status.buffed.duration -= delta;
+    if (char.status.buffed.duration <= 0) {
+      char.status.buffed.active = false;
       updateStatusUI(char);
     }
   }
@@ -108,8 +106,17 @@ function loop(ts) {
       let allies = c.team === "A" ? heroes : monsters;
       let enemies = c.team === "A" ? monsters : heroes;
       let skill = random(c.skills);
-      skill(c, allies, enemies);
-      c.cooldown = 1 / c.spd;
+      if (skill) {
+        // Handle both function-based and object-based skills
+        if (typeof skill === 'function') {
+          skill(c, allies, enemies);
+        } else if (skill.execute && typeof skill.execute === 'function') {
+          skill.execute(c, allies, enemies);
+        }
+      }
+      // Use pspd for physical speed cooldown reduction
+      let speedMultiplier = c.pspd || 1.0;
+      c.cooldown = 1 / speedMultiplier;
     }
   });
   
@@ -199,13 +206,13 @@ function continueNextSet() {
   heroes.forEach(h => {
     h.hp = Math.floor(h.maxHp * 1.1);
     if (h.hp > h.maxHp) h.hp = h.maxHp;
-    updateUI(h);
+    if (h.element) updateUI(h);
   });
   
   // Generate new monster set
   let areaName = getAreaName(currentArea);
   let monsterTemplates = getAreaMonstersTemplate(areaName);
-  monstersContainer.innerHTML = "";
+  if (monstersContainer) monstersContainer.innerHTML = "";
   
   if (isBoss && currentSet % 4 === 0) {
     // Boss battle
@@ -240,16 +247,17 @@ function nextRound() {
       h.hp = h.maxHp;
       h.status = { 
         burn: 0, 
-        shield: false, 
+        shield: { active: false, duration: 0 },
         bleeding: 0, 
         stun: 0, 
         paralyzed: 0, 
-        taunt: false, 
+        taunt: { active: false, duration: 0 },
         critical: 0, 
-        buffed: 0,
+        dodge: { active: false, duration: 0, countRemaining: 0 },
+        buffed: { active: false, duration: 0, stats: {} },
         buffStats: { atk: 0, def: 0, spd: 0 }
       };
-      updateUI(h);
+      if (h.element) updateUI(h);
     });
     
     log(`\n🌟 Starting Area ${currentArea + 1}!\n`);
@@ -266,8 +274,8 @@ function nextRound() {
       h.status.bleeding = 0;
       h.status.stun = 0;
       h.status.paralyzed = 0;
-      h.status.taunt = false;
-      updateUI(h);
+      h.status.taunt = { active: false, duration: 0 };
+      if (h.element) updateUI(h);
     });
     
     // Check if next is boss round
@@ -335,29 +343,33 @@ function resetGame() {
   isPaused = false;
   petualanganAktif = true;
   
-  battleLog.innerHTML = "";
+  if (battleLog) battleLog.innerHTML = "";
+  if (monstersContainer) monstersContainer.innerHTML = "";
+  monsters = [];
   
   // Reset heroes
   heroes.forEach(h => {
     h.hp = h.maxHp;
-    h.atk = h.origAtk;
-    h.def = h.origDef;
-    h.spd = h.origSpd;
+    // Use actual stats from character if old properties don't exist
+    if (h.origAtk !== undefined) h.atk = h.origAtk;
+    if (h.origDef !== undefined) h.def = h.origDef;
+    if (h.origSpd !== undefined) h.spd = h.origSpd;
     h.cooldown = 0;
     h.statsPoints = 0;
     h.equipment = [];
     h.status = { 
       burn: 0, 
-      shield: false, 
+      shield: { active: false, duration: 0 },
       bleeding: 0, 
       stun: 0, 
       paralyzed: 0, 
-      taunt: false, 
+      taunt: { active: false, duration: 0 },
       critical: 0, 
-      buffed: 0,
+      dodge: { active: false, duration: 0, countRemaining: 0 },
+      buffed: { active: false, duration: 0, stats: {} },
       buffStats: { atk: 0, def: 0, spd: 0 }
     };
-    h.element.classList.remove("dead");
+    if (h.element) h.element.classList.remove("dead");
     updateUI(h);
   });
   
@@ -378,6 +390,11 @@ function updateStageInfo() {
 
 function startBattle() {
   petualanganAktif = true;
+  
+  // Ensure heroes have UI elements initialized
+  if (heroes.length > 0 && !heroes[0].element) {
+    heroes.forEach(h => createUI(h, heroesContainer));
+  }
   
   // Generate first monster set
   let areaName = getAreaName(currentArea);
@@ -400,11 +417,21 @@ function startBattle() {
 }
 
 // Initialize on load
-heroes.forEach(h => createUI(h, heroesContainer));
-updateStageInfo();
-
-// Setup keyboard and UI listeners
 document.addEventListener("DOMContentLoaded", () => {
-  // Keyboard listener is already setup above
-  console.log("Game initialized - Press SPACE to pause/resume");
+  // Ensure elements exist before creating UI
+  if (heroesContainer && monstersContainer) {
+    heroes.forEach(h => createUI(h, heroesContainer));
+    updateStageInfo();
+    console.log("Game initialized - Press SPACE to pause/resume");
+  } else {
+    console.error("Game containers not found - make sure HTML contains #heroes and #monsters elements");
+  }
 });
+
+// Fallback initialization after short delay
+setTimeout(() => {
+  if (heroes.length > 0 && heroesContainer && !heroes[0].element) {
+    heroes.forEach(h => createUI(h, heroesContainer));
+    updateStageInfo();
+  }
+}, 100);

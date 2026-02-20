@@ -8,7 +8,7 @@ const HERO_TEMPLATES = {
       tatt: 0, pspd: 0.9, mspd: 0.8,
       ccrit: 0.08, dcrit: 1.3
     },
-    initialSkills: ["knightSlash", "shieldBarrier", "defensiveStance", "heavySwing"]
+    initialSkills: ["knightSlash", "shieldBarrier", "moonswipe", "heavySwing"]
   },
   priest: {
     name: "Priest",
@@ -18,7 +18,7 @@ const HERO_TEMPLATES = {
       tatt: 0, pspd: 0.9, mspd: 1.2,
       ccrit: 0.05, dcrit: 1.2
     },
-    initialSkills: ["holyHeal", "blessings", "resurrection", "divineShield"]
+    initialSkills: ["holyHeal", "blessings", "resurrect", "divinePressure"]
   },
   mage: {
     name: "Mage",
@@ -28,7 +28,7 @@ const HERO_TEMPLATES = {
       tatt: 0, pspd: 0.8, mspd: 1.3,
       ccrit: 0.10, dcrit: 1.5
     },
-    initialSkills: ["inferno", "lightingStrike", "frostbolt", "spellShield"]
+    initialSkills: ["inferno", "lightingStrike", "airCutting", "spellShield"]
   },
   rogue: {
     name: "Rogue",
@@ -38,7 +38,7 @@ const HERO_TEMPLATES = {
       tatt: 0, pspd: 1.4, mspd: 0.9,
       ccrit: 0.25, dcrit: 1.8
     },
-    initialSkills: ["quickStrike", "evasion", "shadowStrike", "assassinate"]
+    initialSkills: ["quickStrike", "evasion", "shadowStrike", "targetedSlice"]
   },
   paladin: {
     name: "Paladin",
@@ -48,7 +48,7 @@ const HERO_TEMPLATES = {
       tatt: 0, pspd: 0.85, mspd: 0.95,
       ccrit: 0.12, dcrit: 1.4
     },
-    initialSkills: ["holyStrike", "divineTaunt", "sanctuaryAura", "redemption"]
+    initialSkills: ["heavySwing", "taunt", "martyr", "parry"]
   },
   archer: {
     name: "Archer",
@@ -58,7 +58,7 @@ const HERO_TEMPLATES = {
       tatt: 0, pspd: 1.15, mspd: 1.0,
       ccrit: 0.20, dcrit: 1.6
     },
-    initialSkills: ["preciseShot", "multiShot", "powerShot", "evasionShot"]
+    initialSkills: ["preciseShot", "multiShot", "piercingShot", "evasion"]
   }
 };
 

@@ -2,17 +2,43 @@
 function createUI(char, container) {
   let div = document.createElement("div");
   div.className = "character";
-  div.innerHTML = `<strong>${char.name}</strong>
-<div class="hp-bar"><div class="hp-fill"></div></div>
-<div class="stats"></div>
-<div class="character-equipment"></div>
-<div class="status"></div>`;
+  
+  let nameEl = document.createElement("strong");
+  nameEl.textContent = char.name;
+  
+  let hpBar = document.createElement("div");
+  hpBar.className = "hp-bar";
+  
+  let hpFill = document.createElement("div");
+  hpFill.className = "hp-fill";
+  hpBar.appendChild(hpFill);
+  
+  let stats = document.createElement("div");
+  stats.className = "stats";
+  
+  let equipment = document.createElement("div");
+  equipment.className = "character-equipment";
+  
+  let status = document.createElement("div");
+  status.className = "status";
+  
+  // Assemble the character element
+  div.appendChild(nameEl);
+  div.appendChild(hpBar);
+  div.appendChild(stats);
+  div.appendChild(equipment);
+  div.appendChild(status);
+  
+  // Set character references
   char.element = div;
-  char.hpFill = div.querySelector(".hp-fill");
+  char.hpFill = hpFill;
+  
+  // Add to container
   container.appendChild(div);
 }
 
 function updateEquipmentDisplay(char) {
+  if (!char.element) return; // Safety check
   let equipText = "";
   if (char.equipment && char.equipment.length > 0) {
     equipText = "📦 " + char.equipment.map(e => e.name).join(", ");
@@ -149,25 +175,28 @@ function giveEquipmentToHero(hero, equip) {
 }
 
 function updateHPUI(char) {
+  if (!char.hpFill || !char.element) return; // Safety check
   char.hpFill.style.width = (char.hp / char.maxHp) * 100 + "%";
   char.element.querySelector(".stats").textContent =
     `HP ${char.hp}/${char.maxHp}`;
 }
 
 function updateStatusUI(char) {
+  if (!char.element) return; // Safety check
   let statusText = "";
   if (char.status.burn > 0) statusText += "🔥Burn ";
   if (char.status.bleeding > 0) statusText += "🩸Bleed ";
-  if (char.status.shield) statusText += "🛡Shield ";
+  if (char.status.shield && char.status.shield.active) statusText += "🛡Shield ";
   if (char.status.stun > 0) statusText += "⚡Stun ";
   if (char.status.paralyzed > 0) statusText += "💤Para ";
-  if (char.status.taunt) statusText += "🎯Taunt ";
+  if (char.status.taunt && char.status.taunt.active) statusText += "🎯Taunt ";
   if (char.status.critical > 0) statusText += "💥Crit ";
-  if (char.status.buffed > 0) statusText += "⭐Buff ";
+  if (char.status.buffed && char.status.buffed.active) statusText += "⭐Buff ";
   char.element.querySelector(".status").textContent = statusText;
 }
 
 function updateDeadUI(char) {
+  if (!char.element) return; // Safety check
   if (!char.isAlive()) {
     char.element.classList.add("dead");
   } else {
@@ -180,4 +209,28 @@ function updateUI(char) {
   updateStatusUI(char);
   updateDeadUI(char);
   updateEquipmentDisplay(char);
+}
+
+function toggleBattleLog() {
+  let logPanel = document.getElementById("battle-log-panel");
+  logPanel.classList.toggle("active");
+}
+
+function closeProfile() {
+  let profileTab = document.getElementById("profile-tab");
+  profileTab.classList.remove("active");
+}
+
+function switchProfileView(viewName) {
+  // Hide all profile sections
+  document.querySelectorAll(".profile-section").forEach(section => {
+    section.classList.remove("active");
+  });
+  document.querySelectorAll(".profile-tab-btn").forEach(btn => {
+    btn.classList.remove("active");
+  });
+  
+  // Show selected section
+  document.getElementById(viewName + "-view").classList.add("active");
+  event.target.classList.add("active");
 }
