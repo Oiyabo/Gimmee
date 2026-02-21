@@ -1,5 +1,8 @@
 class Character {
+  static nextId = 1;
+  
   constructor(name, hp, atk, def, spd, team, skills) {
+    this.id = Character.nextId++;
     this.name = name;
     this.maxHp = hp;
     this.hp = hp;
@@ -28,9 +31,11 @@ class Character {
     this.statsBonus = { atk: 0, def: 0, spd: 0, hp: 0 };
     this.element = null;
     this.hpFill = null;
+    this.type = team === 'hero' ? 'hero' : 'monster';
+    this.isDead = false;
+    this.level = 1;
   }
   isAlive() {
-    console.log(this.name, this.hp);
     return this.hp > 0;
   }
   takeDamage(amount) {
@@ -42,8 +47,12 @@ class Character {
     let dmg = Math.max(0, amount - this.def);
     this.hp -= dmg;
     if (this.hp < 0) this.hp = 0;
+    this.isDead = this.hp <= 0;
     updateHPUI(this);
     updateDeadUI(this);
+    if (typeof updateCharacterDisplay === 'function') {
+      updateCharacterDisplay(this);
+    }
     return dmg;
   }
   heal(amount) {

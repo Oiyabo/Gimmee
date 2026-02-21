@@ -205,7 +205,6 @@ function continueNextSet() {
   // Generate new monster set
   let areaName = getAreaName(currentArea);
   let monsterTemplates = getAreaMonstersTemplate(areaName);
-  monstersContainer.innerHTML = "";
   
   if (isBoss && currentSet % 4 === 0) {
     // Boss battle
@@ -216,7 +215,10 @@ function continueNextSet() {
     log(`⚔ SET ${currentSet + 1} START - Area ${currentArea + 1} (${areaName}), Round ${currentRound + 1}`);
   }
   
-  monsters.forEach(m => createUI(m, monstersContainer));
+  // Display monsters on map (random direction)
+  const directions = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'];
+  const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+  displayMonstersOnMap(monsters, randomDirection);
   
   running = true;
   lastTime = performance.now();
@@ -382,9 +384,13 @@ function startBattle() {
   // Generate first monster set
   let areaName = getAreaName(currentArea);
   let monsterTemplates = getAreaMonstersTemplate(areaName);
-  monstersContainer.innerHTML = "";
   monsters = generateMonsterTeam(currentSet, monsterTemplates);
-  monsters.forEach(m => createUI(m, monstersContainer));
+  
+  // Initialize the battle map with heroes and monsters
+  displayHeroesOnMap(heroes);
+  const directions = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'];
+  const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+  displayMonstersOnMap(monsters, randomDirection);
   
   updateStageInfo();
   
@@ -400,7 +406,8 @@ function startBattle() {
 }
 
 // Initialize on load
-heroes.forEach(h => createUI(h, heroesContainer));
+initializeBattleMap();
+displayHeroesOnMap(heroes);
 updateStageInfo();
 
 // Setup keyboard and UI listeners

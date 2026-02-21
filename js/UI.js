@@ -12,6 +12,136 @@ function createUI(char, container) {
   container.appendChild(div);
 }
 
+/**
+ * Display heroes on the battle map
+ * @param {Array} heroList - Array of hero characters
+ */
+function displayHeroesOnMap(heroList) {
+  const battleMap = document.getElementById('battle-map');
+  if (!battleMap) return;
+  
+  initializeBattleMap();
+  
+  // Place heroes in random positions on the left side of the map
+  for (let hero of heroList) {
+    if (hero.isDead) continue;
+    
+    let placed = false;
+    let attempts = 0;
+    
+    // Try to place heroes on the left side (columns 0-3)
+    while (!placed && attempts < 30) {
+      const row = Math.floor(Math.random() * 8);
+      const col = Math.floor(Math.random() * 4);
+      
+      if (!isPositionOccupied(row, col)) {
+        placeCharacterOnMap(hero, row, col);
+        hero.mapPosition = { row, col };
+        placed = true;
+      }
+      attempts++;
+    }
+  }
+  
+  updateHeroesPanel(heroList);
+}
+
+/**
+ * Display monsters on the battle map
+ * @param {Array} monsterList - Array of monster characters
+ * @param {string} direction - Direction where monsters should spawn (N, S, E, W, NE, NW, SE, SW)
+ */
+function displayMonstersOnMap(monsterList, direction = 'E') {
+  // Remove dead monsters from the map first
+  removeDeadCharactersFromMap();
+  
+  // Place monsters in random positions on the right side of the map (columns 4-7)
+  for (let monster of monsterList) {
+    if (monster.isDead) continue;
+    
+    let placed = false;
+    let attempts = 0;
+    const directionMap = {
+      'E': { minCol: 4, maxCol: 7, minRow: 0, maxRow: 7 },
+      'W': { minCol: 0, maxCol: 3, minRow: 0, maxRow: 7 },
+      'N': { minCol: 0, maxCol: 7, minRow: 0, maxRow: 3 },
+      'S': { minCol: 0, maxCol: 7, minRow: 4, maxRow: 7 },
+      'NE': { minCol: 4, maxCol: 7, minRow: 0, maxRow: 3 },
+      'NW': { minCol: 0, maxCol: 3, minRow: 0, maxRow: 3 },
+      'SE': { minCol: 4, maxCol: 7, minRow: 4, maxRow: 7 },
+      'SW': { minCol: 0, maxCol: 3, minRow: 4, maxRow: 7 }
+    };
+    
+    const bounds = directionMap[direction] || directionMap['E'];
+    
+    while (!placed && attempts < 30) {
+      const row = bounds.minRow + Math.floor(Math.random() * (bounds.maxRow - bounds.minRow + 1));
+      const col = bounds.minCol + Math.floor(Math.random() * (bounds.maxCol - bounds.minCol + 1));
+      
+      if (!isPositionOccupied(row, col)) {
+        placeCharacterOnMap(monster, row, col);
+        monster.mapPosition = { row, col };
+        placed = true;
+      }
+      attempts++;
+    }
+  }
+  
+  updateMonstersPanel(monsterList);
+}
+
+/**
+ * Update the heroes panel display
+ * @param {Array} heroList
+ */
+function updateHeroesPanel(heroList) {
+  const panel = document.getElementById('heroes');
+  if (!panel) return;
+  
+  panel.innerHTML = '';
+  
+  for (let hero of heroList) {
+    const div = document.createElement('div');
+    div.className = 'character';
+    div.innerHTML = `<strong>${hero.name}</strong>
+    <div class="hp-bar"><div class="hp-fill"></div></div>
+    <div class="stats"></div>
+    <div class="character-equipment"></div>
+    <div class="status"></div>`;
+    
+    hero.element = div;
+    hero.hpFill = div.querySelector(".hp-fill");
+    
+    panel.appendChild(div);
+  }
+}
+
+/**
+ * Update the monsters panel display
+ * @param {Array} monsterList
+ */
+function updateMonstersPanel(monsterList) {
+  const panel = document.getElementById('monsters');
+  if (!panel) return;
+  
+  panel.innerHTML = '';
+  
+  for (let monster of monsterList) {
+    const div = document.createElement('div');
+    div.className = 'character';
+    div.innerHTML = `<strong>${monster.name}</strong>
+    <div class="hp-bar"><div class="hp-fill"></div></div>
+    <div class="stats"></div>
+    <div class="character-equipment"></div>
+    <div class="status"></div>`;
+    
+    monster.element = div;
+    monster.hpFill = div.querySelector(".hp-fill");
+    
+    panel.appendChild(div);
+  }
+}
+
 function updateEquipmentDisplay(char) {
   let equipText = "";
   if (char.equipment && char.equipment.length > 0) {
@@ -180,4 +310,9 @@ function updateUI(char) {
   updateStatusUI(char);
   updateDeadUI(char);
   updateEquipmentDisplay(char);
+  
+  // Update map display if character is on map
+  if (typeof updateCharacterDisplay === 'function') {
+    updateCharacterDisplay(char);
+  }
 }

@@ -6,6 +6,7 @@
     <title>Automatic Battle RPG - 3v3 Skill System</title>
     <link rel="stylesheet" href="style.css">
     <script src="js/preparation.js" defer></script>
+    <script src="js/mapSystem.js" defer></script>
     <script src="js/skills.js" defer></script>
     <script src="js/heroes.js" defer></script>
     <script src="js/monsterTemplate.js" defer></script>
@@ -18,13 +19,20 @@
       <h1>⚔ Area > Round > Set Battle System</h1>
       <div id="stage-info" class="stage-info">Area 1 - Round 1 - Set 1</div>
       <div class="battlefield">
-        <div class="team">
-          <h2>Heroes</h2>
-          <div id="heroes"></div>
+        <!-- Dynamic Map Grid (8x8) -->
+        <div class="map-container">
+          <h2>Battle Map</h2>
+          <div id="battle-map" class="battle-map"></div>
         </div>
-        <div class="team">
+        <!-- Heroes Panel -->
+        <div class="heroes-panel">
+          <h2>Heroes</h2>
+          <div id="heroes" class="heroes-list"></div>
+        </div>
+        <!-- Monsters Panel -->
+        <div class="monsters-panel">
           <h2>Monsters</h2>
-          <div id="monsters"></div>
+          <div id="monsters" class="monsters-list"></div>
         </div>
       </div>
       <div class="controls">

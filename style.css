@@ -61,23 +61,169 @@ h1 {
 
 .battlefield {
     display: flex;
-    justify-content: space-between;
+    gap: 20px;
     margin-top: 20px;
+    align-items: flex-start;
 }
 
-.team {
-    width: 48%;
+/* ===== BATTLE MAP (8x8 Grid) ===== */
+.map-container {
+    flex-shrink: 0;
 }
 
-.team h2 {
+.map-container h2 {
     text-align: center;
+    margin: 0 0 10px 0;
+}
+
+.battle-map {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    gap: 2px;
+    background: #0f172a;
+    padding: 8px;
+    border-radius: 8px;
+    width: 400px;
+    height: 400px;
+}
+
+.placement-block {
+    background: #334155;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    position: relative;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.placement-block:hover {
+    background: #475569;
+    border-color: #64748b;
+}
+
+.placement-block:not(.occupied):hover {
+    background: #2d5a3d;
+    border-color: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.placement-block.occupied {
+    background: #1e293b;
+}
+
+/* ===== CHARACTER BLOCK (Square) ===== */
+.character-block {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 10px;
+    color: #e2e8f0;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 3px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.character-block.hero:hover {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+.character-block.selected {
+    background: #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+    border: 2px solid #60a5fa;
+}
+
+.character-block.hero {
+    background: #334155;
+}
+
+.character-block.monster {
+    background: #7c2d12;
+}
+
+.character-block.dead {
+    opacity: 0.35;
+}
+
+/* HP Stroke Border */
+.character-hp-stroke {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    border: 3px solid transparent;
+    border-image: linear-gradient(to bottom, #ef4444 0%, #dc2626 100%);
+    border-image-slice: 1;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.character-hp-stroke.hp-stroke {
+    border: 3px solid #ef4444;
+    clip-path: polygon(0 0, 100% 0, 100% var(--hp-percentage), 0 var(--hp-percentage));
+}
+
+.character-name {
+    font-weight: bold;
+    font-size: 11px;
+    margin-bottom: 2px;
+}
+
+.character-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 9px;
+}
+
+.character-hp {
+    color: #22c55e;
+}
+
+.character-level {
+    color: #60a5fa;
+}
+
+/* ===== HEROES PANEL ===== */
+.heroes-panel,
+.monsters-panel {
+    flex: 1;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.heroes-panel h2,
+.monsters-panel h2 {
+    text-align: center;
+    margin: 0 0 10px 0;
+}
+
+.heroes-list,
+.monsters-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .character {
     background: #334155;
     padding: 10px;
     border-radius: 8px;
-    margin-bottom: 10px;
     font-size: 13px;
     position: relative;
 }
