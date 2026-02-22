@@ -6,7 +6,7 @@ const GRID_SIZE = MAP_SIZE * MAP_SIZE; // 64 placement blocks
 
 // Store character positions: Map<characterId, {row, col}>
 let characterPositions = new Map();
-let selectedHeroId = null; // Track selected hero for click-and-drop
+let canDragCharacters = true; // Enable dragging during transitions
 
 /**
  * Initialize the battle map grid with 64 empty placement blocks
@@ -24,7 +24,8 @@ function initializeBattleMap() {
         placementBlock.id = `placement-${row}-${col}`;
         placementBlock.dataset.row = row;
         placementBlock.dataset.col = col;
-        placementBlock.addEventListener('click', () => handlePlacementBlockClick(row, col));
+        placementBlock.addEventListener('dragover', handleDragOver);
+        placementBlock.addEventListener('drop', (e) => handleDrop(e, row, col));
         
         battleMapContainer.appendChild(placementBlock);
     }
@@ -107,6 +108,8 @@ function createCharacterBlock(character) {
     const div = document.createElement('div');
     div.className = `character-block ${character.type || 'hero'}`;
     div.id = `char-block-${character.id}`;
+    // Heroes are always draggable
+    div.draggable = character.type === 'hero';
     div.dataset.characterId = character.id;
     
     const hpPercentage = character.hp / character.maxHP * 100;
@@ -124,11 +127,10 @@ function createCharacterBlock(character) {
         div.classList.add('dead');
     }
     
-    console.log(character);
-    // Add click listener for heroes (click-and-drop system)
+    // Add drag listeners for heroes
     if (character.type === 'hero') {
-        div.style.cursor = 'pointer';
-        div.addEventListener('click', () => handleHeroBlockClick(character.id));
+        div.addEventListener('dragstart', handleDragStart);
+        div.addEventListener('dragend', handleDragEnd);
     }
     
     return div;
@@ -233,7 +235,7 @@ function findTargetWithDistanceBias(characterId, enemies) {
 }
 
 /**
- * Remove dead characters from the map
+ * Remove dead monsters from the map (NOT heroes - they stay even when dead)
  */
 function removeDeadCharactersFromMap() {
     const deadCharacterIds = [];
@@ -241,9 +243,12 @@ function removeDeadCharactersFromMap() {
     for (let [charId, pos] of characterPositions.entries()) {
         // Find the character in heroes or monsters
         let character = null;
+        let isHero = false;
+        
         for (let hero of heroes) {
             if (hero.id === charId) {
                 character = hero;
+                isHero = true;
                 break;
             }
         }
@@ -256,8 +261,8 @@ function removeDeadCharactersFromMap() {
             }
         }
         
-        // If character is dead or doesn't exist, remove from map
-        if (!character || character.isDead) {
+        // Only remove dead MONSTERS from map (heroes stay even when dead)
+        if (!character || (character.isDead && !isHero)) {
             const placementBlock = document.getElementById(`placement-${pos.row}-${pos.col}`);
             if (placementBlock) {
                 placementBlock.innerHTML = '';
@@ -271,72 +276,73 @@ function removeDeadCharactersFromMap() {
     deadCharacterIds.forEach(id => characterPositions.delete(id));
 }
 
-// ===== CLICK-AND-DROP HANDLERS =====
-
 /**
- * Handle hero block click - selects/deselects hero for placement
- * @param {number} heroId - Hero character ID
+ * Enable or disable character dragging
+ * @param {boolean} enable
  */
-function handleHeroBlockClick(heroId) {
-    console.log("haha");
-    
-    // If clicking the same hero, deselect
-    if (selectedHeroId === heroId) {
-        selectedHeroId = null;
-        updateHeroBlockSelection();
-        return;
-    }
-    
-    // Select the clicked hero
-    selectedHeroId = heroId;
-    updateHeroBlockSelection();
+function setDragEnabled(enable) {
+    canDragCharacters = enable;
 }
 
-/**
- * Update visual selection of hero blocks
- */
-function updateHeroBlockSelection() {
-    const battleMap = document.getElementById('battle-map');
-    if (!battleMap) return;
-    
-    battleMap.querySelectorAll('.character-block.hero').forEach(block => {
-        if (selectedHeroId && parseInt(block.dataset.characterId) === selectedHeroId) {
-            block.classList.add('selected');
-        } else {
-            block.classList.remove('selected');
-        }
-    });
+// ===== DRAG AND DROP HANDLERS =====
+
+let draggedCharacterId = null;
+
+function handleDragStart(e) {
+    draggedCharacterId = e.target.closest('.character-block').dataset.characterId;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.closest('.character-block').classList.add('dragging');
 }
 
-/**
- * Handle placement block click - moves selected hero to this block
- * @param {number} row - Grid row
- * @param {number} col - Grid column
- */
-function handlePlacementBlockClick(row, col) {
-    if (!selectedHeroId) return;
+function handleDragEnd(e) {
+    e.target.closest('.character-block').classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.style.background = '#2d5a3d';
+}
+
+function handleDrop(e, row, col) {
+    e.preventDefault();
+    e.currentTarget.style.background = '';
     
-    // Find the hero
-    let hero = null;
-    for (let h of heroes) {
-        if (h.id === selectedHeroId) {
-            hero = h;
+    if (!draggedCharacterId) return;
+    
+    // Find the character object
+    let character = null;
+    for (let hero of heroes) {
+        if (hero.id === parseInt(draggedCharacterId)) {
+            console.log(character, hero);
+            
+            character = hero;
             break;
         }
     }
     
-    if (!hero) return;
-    
-    // Try to place the hero
-    if (placeCharacterOnMap(hero, row, col)) {
-        // Update UI panels
-        if (typeof updateHeroesPanel === 'function') {
-            updateHeroesPanel(heroes);
+    if (character) {
+        // Store current stats before moving to prevent any accidental resets
+        const currentHp = character.hp;
+        const currentMaxHp = character.maxHp;
+        const currentStats = JSON.parse(JSON.stringify(character.status));
+        
+        // Place character on new position
+        if (placeCharacterOnMap(character, row, col)) {
+            // Restore all stats to prevent any resets during repositioning
+            character.hp = currentHp;
+            character.maxHp = currentMaxHp;
+            character.status = currentStats;
+            
+            // Update display with preserved stats
+            updateCharacterDisplay(character);
+            if (typeof updateHeroesPanel === 'function') {
+                updateHeroesPanel(heroes);
+            }
         }
-        // Deselect after placement
-        selectedHeroId = null;
-        updateHeroBlockSelection();
     }
+    
+    draggedCharacterId = null;
 }
 
 /**

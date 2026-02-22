@@ -31,7 +31,8 @@ class Character {
     this.statsBonus = { atk: 0, def: 0, spd: 0, hp: 0 };
     this.element = null;
     this.hpFill = null;
-    this.type = team === 'hero' ? 'hero' : 'monster';
+    // Type classification: team 'A' = heroes, others = monsters
+    this.type = team === 'A' ? 'hero' : 'monster';
     this.isDead = false;
     this.level = 1;
   }

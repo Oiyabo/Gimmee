@@ -99,18 +99,11 @@ h1 {
     align-items: center;
     justify-content: center;
     transition: all 0.15s ease;
-    cursor: pointer;
 }
 
 .placement-block:hover {
     background: #475569;
     border-color: #64748b;
-}
-
-.placement-block:not(.occupied):hover {
-    background: #2d5a3d;
-    border-color: #10b981;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
 }
 
 .placement-block.occupied {
@@ -128,21 +121,20 @@ h1 {
     position: relative;
     font-size: 10px;
     color: #e2e8f0;
-    cursor: pointer;
+    cursor: grab;
     user-select: none;
     border-radius: 3px;
     padding: 4px;
     box-sizing: border-box;
 }
 
-.character-block.hero:hover {
+.character-block.draggable:hover {
     background: rgba(59, 130, 246, 0.3);
 }
 
-.character-block.selected {
-    background: #3b82f6 !important;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
-    border: 2px solid #60a5fa;
+.character-block.dragging {
+    opacity: 0.7;
+    cursor: grabbing;
 }
 
 .character-block.hero {

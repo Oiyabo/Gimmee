@@ -15,31 +15,54 @@ function createUI(char, container) {
 /**
  * Display heroes on the battle map
  * @param {Array} heroList - Array of hero characters
+ * @param {boolean} forceReposition - Force repositioning even if already placed
  */
-function displayHeroesOnMap(heroList) {
+function displayHeroesOnMap(heroList, forceReposition = false) {
   const battleMap = document.getElementById('battle-map');
   if (!battleMap) return;
   
-  initializeBattleMap();
+  // Only initialize map on first call (forceReposition = false and no heroes on map yet)
+  const hasHeroesOnMap = Array.from(characterPositions.values()).some(pos => {
+    for (let hero of heroList) {
+      if (characterPositions.has(hero.id)) return true;
+    }
+    return false;
+  });
   
-  // Place heroes in random positions on the left side of the map
+  if (!hasHeroesOnMap || forceReposition) {
+    initializeBattleMap();
+  }
+  
+  // Only place heroes that aren't already on the map
   for (let hero of heroList) {
-    if (hero.isDead) continue;
+    const existingPosition = getCharacterPosition(hero.id);
     
-    let placed = false;
-    let attempts = 0;
-    
-    // Try to place heroes on the left side (columns 0-3)
-    while (!placed && attempts < 30) {
-      const row = Math.floor(Math.random() * 8);
-      const col = Math.floor(Math.random() * 4);
-      
-      if (!isPositionOccupied(row, col)) {
-        placeCharacterOnMap(hero, row, col);
-        hero.mapPosition = { row, col };
-        placed = true;
+    // If hero already has a position and not forcing reposition, skip
+    if (existingPosition && !forceReposition) {
+      // Just update the display
+      if (characterPositions.has(hero.id)) {
+        updateCharacterDisplay(hero);
       }
-      attempts++;
+      continue;
+    }
+    
+    // Place hero only if not already positioned
+    if (!characterPositions.has(hero.id)) {
+      let placed = false;
+      let attempts = 0;
+      
+      // Try to place heroes on the left side (columns 0-3)
+      while (!placed && attempts < 30) {
+        const row = Math.floor(Math.random() * 8);
+        const col = Math.floor(Math.random() * 4);
+        
+        if (!isPositionOccupied(row, col)) {
+          placeCharacterOnMap(hero, row, col);
+          hero.mapPosition = { row, col };
+          placed = true;
+        }
+        attempts++;
+      }
     }
   }
   
