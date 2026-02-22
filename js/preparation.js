@@ -28,6 +28,8 @@ class Character {
     this.statsBonus = { atk: 0, def: 0, spd: 0, hp: 0 };
     this.element = null;
     this.hpFill = null;
+    this.gridElement = null;
+    this.gridPosition = null; // { row: 0-7, col: 0-7 }
   }
   isAlive() {
     console.log(this.name, this.hp);
@@ -141,3 +143,191 @@ function generateBoss(round, area) {
   
   return boss;
 }
+
+// ===== GRID SYSTEM =====
+const GRID_SIZE = 8;
+const GRID_TOTAL = GRID_SIZE * GRID_SIZE; // 64
+let gridOccupancy = {}; // { "row-col": characterObject }
+let heroStartPositions = {}; // Simpan posisi awal heroes saat battle dimulai
+
+function initializeGrid() {
+  gridOccupancy = {};
+  heroStartPositions = {};
+  const battleMapGrid = document.getElementById("battle-map-grid");
+  battleMapGrid.innerHTML = "";
+  
+  // Create 64 placement blocks
+  for (let i = 0; i < GRID_TOTAL; i++) {
+    const row = Math.floor(i / GRID_SIZE);
+    const col = i % GRID_SIZE;
+    const placementBlock = document.createElement("div");
+    placementBlock.className = "placement-block";
+    placementBlock.id = `grid-${row}-${col}`;
+    placementBlock.dataset.row = row;
+    placementBlock.dataset.col = col;
+    
+    // Add drop zone functionality
+    placementBlock.addEventListener("dragover", (e) => handleDragOver(e));
+    placementBlock.addEventListener("drop", (e) => handleDrop(e, row, col));
+    placementBlock.addEventListener("dragleave", (e) => handleDragLeave(e));
+    
+    battleMapGrid.appendChild(placementBlock);
+  }
+}
+
+function getGridKey(row, col) {
+  return `${row}-${col}`;
+}
+
+function placeCharacterOnGrid(character, row, col) {
+  const key = getGridKey(row, col);
+  
+  // Remove from old position if exists
+  if (character.gridPosition) {
+    const oldKey = getGridKey(character.gridPosition.row, character.gridPosition.col);
+    delete gridOccupancy[oldKey];
+    const oldBlock = document.getElementById(`grid-${character.gridPosition.row}-${character.gridPosition.col}`);
+    if (oldBlock) {
+      oldBlock.innerHTML = "";
+      oldBlock.classList.remove("occupied");
+    }
+  }
+  
+  // Place on new position
+  character.gridPosition = { row, col };
+  gridOccupancy[key] = character;
+  
+  const placementBlock = document.getElementById(`grid-${row}-${col}`);
+  if (placementBlock) {
+    placementBlock.innerHTML = "";
+    placementBlock.classList.add("occupied");
+    
+    const characterDiv = document.createElement("div");
+    characterDiv.className = `character-in-grid ${character.team === "A" ? "hero" : "monster"}`;
+    characterDiv.draggable = character.team === "A"; // Only heroes can be dragged
+    characterDiv.id = `grid-char-${character.name.replace(/\s/g, "-")}`;
+    
+    if (character.team === "A") {
+      characterDiv.draggable = true;
+      characterDiv.addEventListener("dragstart", handleDragStart);
+      characterDiv.addEventListener("dragend", handleDragEnd);
+    }
+    
+    // Character name
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "character-block-name";
+    nameDiv.textContent = character.name.substring(0, 8);
+    characterDiv.appendChild(nameDiv);
+    
+    // HP indicator
+    const hpIndicator = document.createElement("div");
+    hpIndicator.className = "character-hp-indicator";
+    
+    const hpFill = document.createElement("div");
+    hpFill.className = "character-hp-fill";
+    updateHPFillColor(hpFill, character);
+    hpFill.style.width = (character.hp / character.maxHp) * 100 + "%";
+    
+    hpIndicator.appendChild(hpFill);
+    characterDiv.appendChild(hpIndicator);
+    
+    character.gridElement = characterDiv;
+    character.gridHPFill = hpFill;
+    
+    placementBlock.appendChild(characterDiv);
+  }
+}
+
+function removeCharacterFromGrid(character) {
+  if (character.gridPosition) {
+    const key = getGridKey(character.gridPosition.row, character.gridPosition.col);
+    delete gridOccupancy[key];
+    
+    const placementBlock = document.getElementById(`grid-${character.gridPosition.row}-${character.gridPosition.col}`);
+    if (placementBlock) {
+      placementBlock.innerHTML = "";
+      placementBlock.classList.remove("occupied");
+    }
+    
+    character.gridPosition = null;
+    character.gridElement = null;
+  }
+}
+
+function updateHPFillColor(hpFill, character) {
+  const hpPercent = character.hp / character.maxHp;
+  hpFill.classList.remove("low", "critical", "dead");
+  
+  if (character.hp <= 0) {
+    hpFill.classList.add("dead");
+  } else if (hpPercent <= 0.25) {
+    hpFill.classList.add("critical");
+  } else if (hpPercent <= 0.5) {
+    hpFill.classList.add("low");
+  }
+}
+
+function updateGridCharacterHP(character) {
+  if (character.gridHPFill) {
+    const newWidth = (character.hp / character.maxHp) * 100;
+    character.gridHPFill.style.width = newWidth + "%";
+    updateHPFillColor(character.gridHPFill, character);
+  }
+}
+
+// Drag and Drop Handlers
+let draggedCharacter = null;
+
+function handleDragStart(e) {
+  const characterElement = e.target.closest(".character-in-grid");
+  if (characterElement) {
+    draggedCharacter = Object.values(gridOccupancy).find(c => c.gridElement === characterElement);
+    if (draggedCharacter) {
+      e.dataTransfer.effectAllowed = "move";
+      characterElement.classList.add("dragging");
+    }
+  }
+}
+
+function handleDragEnd(e) {
+  const characterElement = e.target.closest(".character-in-grid");
+  if (characterElement) {
+    characterElement.classList.remove("dragging");
+  }
+  draggedCharacter = null;
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  e.target.closest(".placement-block")?.classList.add("highlight");
+}
+
+function handleDragLeave(e) {
+  if (e.target.classList.contains("placement-block")) {
+    e.target.classList.remove("highlight");
+  }
+}
+
+function handleDrop(e, row, col) {
+  e.preventDefault();
+  
+  const placementBlock = e.target.closest(".placement-block");
+  if (placementBlock) {
+    placementBlock.classList.remove("highlight");
+  }
+  
+  if (!draggedCharacter) return;
+  
+  const key = getGridKey(row, col);
+  
+  // Check if position is occupied
+  if (gridOccupancy[key] && gridOccupancy[key] !== draggedCharacter) {
+    log(`Position sudah ditempati oleh ${gridOccupancy[key].name}!`);
+    return;
+  }
+  
+  placeCharacterOnGrid(draggedCharacter, row, col);
+  log(`${draggedCharacter.name} dipindahkan ke grid [${row},${col}]`);
+}
+

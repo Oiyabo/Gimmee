@@ -17,7 +17,9 @@ function updateEquipmentDisplay(char) {
   if (char.equipment && char.equipment.length > 0) {
     equipText = "📦 " + char.equipment.map(e => e.name).join(", ");
   }
-  char.element.querySelector(".character-equipment").textContent = equipText;
+  if (char.element) {
+    char.element.querySelector(".character-equipment").textContent = equipText;
+  }
 }
 
 function switchTab(tabName) {
@@ -149,9 +151,16 @@ function giveEquipmentToHero(hero, equip) {
 }
 
 function updateHPUI(char) {
-  char.hpFill.style.width = (char.hp / char.maxHp) * 100 + "%";
-  char.element.querySelector(".stats").textContent =
-    `HP ${char.hp}/${char.maxHp}`;
+  if (char.element && char.hpFill) {
+    char.hpFill.style.width = (char.hp / char.maxHp) * 100 + "%";
+    char.element.querySelector(".stats").textContent =
+      `HP ${char.hp}/${char.maxHp}`;
+  }
+  
+  // Also update grid HP if character is on grid
+  if (char.gridHPFill) {
+    updateGridCharacterHP(char);
+  }
 }
 
 function updateStatusUI(char) {
@@ -164,14 +173,28 @@ function updateStatusUI(char) {
   if (char.status.taunt) statusText += "🎯Taunt ";
   if (char.status.critical > 0) statusText += "💥Crit ";
   if (char.status.buffed > 0) statusText += "⭐Buff ";
-  char.element.querySelector(".status").textContent = statusText;
+  if (char.element) {
+    char.element.querySelector(".status").textContent = statusText;
+  }
 }
 
 function updateDeadUI(char) {
   if (!char.isAlive()) {
-    char.element.classList.add("dead");
+    if (char.element) {
+      char.element.classList.add("dead");
+    }
+    if (char.gridElement) {
+      char.gridElement.classList.add("dead");
+      char.gridElement.style.opacity = "0.35";
+    }
   } else {
-    char.element.classList.remove("dead");
+    if (char.element) {
+      char.element.classList.remove("dead");
+    }
+    if (char.gridElement) {
+      char.gridElement.classList.remove("dead");
+      char.gridElement.style.opacity = "1";
+    }
   }
 }
 

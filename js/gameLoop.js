@@ -200,6 +200,14 @@ function continueNextSet() {
     h.hp = Math.floor(h.maxHp * 1.1);
     if (h.hp > h.maxHp) h.hp = h.maxHp;
     updateUI(h);
+    updateGridCharacterHP(h);
+  });
+  
+  // Remove dead monsters from grid and container
+  monsters.forEach(m => {
+    if (!m.isAlive()) {
+      removeCharacterFromGrid(m);
+    }
   });
   
   // Generate new monster set
@@ -217,6 +225,12 @@ function continueNextSet() {
   }
   
   monsters.forEach(m => createUI(m, monstersContainer));
+  
+  // Place new monsters on grid (right side, distribute from top)
+  monsters.forEach((m, idx) => {
+    let row = idx * 2;
+    placeCharacterOnGrid(m, row, 7);
+  });
   
   running = true;
   lastTime = performance.now();
@@ -337,6 +351,19 @@ function resetGame() {
   
   battleLog.innerHTML = "";
   
+  // Reset grid (clear occupancy but keep DOM)
+  gridOccupancy = {};
+  heroStartPositions = {};
+  for (let i = 0; i < GRID_TOTAL; i++) {
+    const row = Math.floor(i / GRID_SIZE);
+    const col = i % GRID_SIZE;
+    const block = document.getElementById(`grid-${row}-${col}`);
+    if (block) {
+      block.innerHTML = "";
+      block.classList.remove("occupied");
+    }
+  }
+  
   // Reset heroes
   heroes.forEach(h => {
     h.hp = h.maxHp;
@@ -357,6 +384,8 @@ function resetGame() {
       buffed: 0,
       buffStats: { atk: 0, def: 0, spd: 0 }
     };
+    h.gridPosition = null;
+    h.gridElement = null;
     h.element.classList.remove("dead");
     updateUI(h);
   });
@@ -379,12 +408,46 @@ function updateStageInfo() {
 function startBattle() {
   petualanganAktif = true;
   
+  // Clear grid occupancy (grid DOM already exists from page load)
+  gridOccupancy = {};
+  // Clear all placement blocks
+  for (let i = 0; i < GRID_TOTAL; i++) {
+    const row = Math.floor(i / GRID_SIZE);
+    const col = i % GRID_SIZE;
+    const block = document.getElementById(`grid-${row}-${col}`);
+    if (block) {
+      block.innerHTML = "";
+      block.classList.remove("occupied");
+    }
+  }
+  
   // Generate first monster set
   let areaName = getAreaName(currentArea);
   let monsterTemplates = getAreaMonstersTemplate(areaName);
   monstersContainer.innerHTML = "";
   monsters = generateMonsterTeam(currentSet, monsterTemplates);
   monsters.forEach(m => createUI(m, monstersContainer));
+  
+  // Place heroes on grid (left side, distribute evenly)
+  let heroStartCols = [0, 1];
+  heroes.forEach((h, idx) => {
+    let row = idx % 4;
+    let col = heroStartCols[Math.floor(idx / 4)];
+    placeCharacterOnGrid(h, row * 2, col);
+  });
+  
+  // Place monsters on grid (right side)
+  monsters.forEach((m, idx) => {
+    let row = idx * 2;
+    placeCharacterOnGrid(m, row, 7);
+  });
+  
+  // Store hero starting positions
+  heroes.forEach(h => {
+    if (h.gridPosition) {
+      heroStartPositions[h.name] = { ...h.gridPosition };
+    }
+  });
   
   updateStageInfo();
   
@@ -402,6 +465,17 @@ function startBattle() {
 // Initialize on load
 heroes.forEach(h => createUI(h, heroesContainer));
 updateStageInfo();
+
+// Initialize grid at page load
+initializeGrid();
+
+// Place heroes on grid from page load
+let heroStartCols = [0, 1];
+heroes.forEach((h, idx) => {
+  let row = idx % 4;
+  let col = heroStartCols[Math.floor(idx / 4)];
+  placeCharacterOnGrid(h, row * 2, col);
+});
 
 // Setup keyboard and UI listeners
 document.addEventListener("DOMContentLoaded", () => {
