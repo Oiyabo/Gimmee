@@ -15,7 +15,10 @@ function createUI(char, container) {
 function updateEquipmentDisplay(char) {
   let equipText = "";
   if (char.equipment && char.equipment.length > 0) {
-    equipText = "📦 " + char.equipment.map(e => e.name).join(", ");
+    equipText = "📦 " + char.equipment.map(e => {
+      let abilityStr = (e.ability && EquipmentAbilities[e.ability]) ? ` [${EquipmentAbilities[e.ability].name}]` : "";
+      return e.name + abilityStr;
+    }).join(", ");
   }
   if (char.element) {
     char.element.querySelector(".character-equipment").textContent = equipText;
@@ -48,10 +51,15 @@ function updateStatsDisplay() {
     html += `
     <div class="upgrade-item">
       <strong>${h.name}</strong> - Points: ${h.statsPoints || 0}
-      <div style="font-size: 10px; margin: 5px 0;">ATK ${h.atk} | DEF ${h.def} | SPD ${h.spd.toFixed(2)}</div>
-      <button onclick="buyUpgrade(${idx}, 'atk', 3)" ${(h.statsPoints || 0) < 3 ? "disabled" : ""}>ATK +5 (3 pts)</button>
-      <button onclick="buyUpgrade(${idx}, 'def', 3)" ${(h.statsPoints || 0) < 3 ? "disabled" : ""}>DEF +3 (3 pts)</button>
-      <button onclick="buyUpgrade(${idx}, 'spd', 2)" ${(h.statsPoints || 0) < 2 ? "disabled" : ""}>SPD +0.2 (2 pts)</button>
+      <div style="font-size: 10px; margin: 5px 0;">
+        P.ATK ${h.patk} | M.ATK ${h.matk} | P.DEF ${h.pdef} | M.DEF ${h.mdef} | P.SPD ${h.pspd.toFixed(2)} | M.SPD ${h.mspd.toFixed(2)}
+      </div>
+      <button onclick="buyUpgrade(${idx}, 'patk', 3)" ${(h.statsPoints || 0) < 3 ? "disabled" : ""}>P.ATK +5 (3 pts)</button>
+      <button onclick="buyUpgrade(${idx}, 'pdef', 3)" ${(h.statsPoints || 0) < 3 ? "disabled" : ""}>P.DEF +3 (3 pts)</button>
+      <button onclick="buyUpgrade(${idx}, 'pspd', 2)" ${(h.statsPoints || 0) < 2 ? "disabled" : ""}>P.SPD +0.2 (2 pts)</button>
+      <button onclick="buyUpgrade(${idx}, 'matk', 3)" ${(h.statsPoints || 0) < 3 ? "disabled" : ""}>M.ATK +5 (3 pts)</button>
+      <button onclick="buyUpgrade(${idx}, 'mdef', 3)" ${(h.statsPoints || 0) < 3 ? "disabled" : ""}>M.DEF +3 (3 pts)</button>
+      <button onclick="buyUpgrade(${idx}, 'mspd', 2)" ${(h.statsPoints || 0) < 2 ? "disabled" : ""}>M.SPD +0.2 (2 pts)</button>
     </div>
     `;
   });
@@ -63,18 +71,26 @@ function updateEquipmentInventory() {
   heroes.forEach((h, heroIdx) => {
     if (h.equipment && h.equipment.length > 0) {
       h.equipment.forEach((equip, equipIdx) => {
+        let statsDisplay = "";
+        if (equip.stats) {
+          statsDisplay = Object.entries(equip.stats)
+            .map(([key, val]) => `${key.toUpperCase()} +${val}`)
+            .join(", ");
+        }
+        
+        let abilityDisplay = "";
+        if (equip.ability && EquipmentAbilities[equip.ability]) {
+          let ability = EquipmentAbilities[equip.ability];
+          abilityDisplay = `<div class="equipment-ability">⭐ ${ability.name}: ${ability.description}</div>`;
+        }
+        
         html += `
         <div class="equipment-item">
-          <div class="equipment-item-header">${h.name}</div>
-          <div class="equipment-item-header">${equip.name}</div>
-          <div class="equipment-item-rarity">⭐ ${equip.rarity}</div>
-          <div class="equipment-item-stats">
-            ${equip.stats.atk > 0 ? `ATK +${equip.stats.atk} ` : ''}
-            ${equip.stats.def > 0 ? `DEF +${equip.stats.def} ` : ''}
-            ${equip.stats.spd > 0 ? `SPD +${equip.stats.spd.toFixed(2)} ` : ''}
-            ${equip.stats.hp > 0 ? `HP +${equip.stats.hp}` : ''}
-          </div>
-          ${equip.passive ? `<div class="equipment-item-passive">${equip.passive}</div>` : ''}
+          <div class="equipment-item-header">${h.name} - ${equip.name}</div>
+          <div class="equipment-item-rarity">⭐ ${equip.rarity.toUpperCase()}</div>
+          <div class="equipment-item-lore" style="font-size: 10px; font-style: italic; margin: 5px 0;">"${equip.lore}"</div>
+          <div class="equipment-item-stats">${statsDisplay}</div>
+          ${abilityDisplay}
           <button onclick="unequipItem(${heroIdx}, ${equipIdx})">Unequip</button>
         </div>
         `;
@@ -97,15 +113,18 @@ function buyUpgrade(heroIndex, statType, cost) {
   }
   
   hero.statsPoints -= cost;
-  if (statType === "atk") {
-    hero.atk += 5;
-    hero.origAtk += 5;
-  } else if (statType === "def") {
-    hero.def += 3;
-    hero.origDef += 3;
-  } else if (statType === "spd") {
-    hero.spd += 0.2;
-    hero.origSpd += 0.2;
+  if (statType === "patk") {
+    hero.patk += 5;
+  } else if (statType === "matk") {
+    hero.matk += 5;
+  } else if (statType === "pdef") {
+    hero.pdef += 3;
+  } else if (statType === "mdef") {
+    hero.mdef += 3;
+  } else if (statType === "pspd") {
+    hero.pspd += 0.2;
+  } else if (statType === "mspd") {
+    hero.mspd += 0.2;
   }
   
   updateStatsDisplay();
@@ -116,11 +135,22 @@ function unequipItem(heroIndex, equipIndex) {
   let hero = heroes[heroIndex];
   let equip = hero.equipment[equipIndex];
   
-  // Remove stat bonus
-  hero.atk -= equip.stats.atk;
-  hero.def -= equip.stats.def;
-  hero.spd -= equip.stats.spd;
-  hero.maxHp -= equip.stats.hp;
+  // Remove stat bonuses
+  if (equip.stats) {
+    Object.entries(equip.stats).forEach(([key, value]) => {
+      if (hero[key] !== undefined) {
+        hero[key] -= value;
+      }
+    });
+  }
+  
+  // Handle HP changes
+  if (equip.stats && equip.stats.hp) {
+    hero.maxHp -= equip.stats.hp;
+    if (hero.hp > hero.maxHp) {
+      hero.hp = hero.maxHp;
+    }
+  }
   
   // Remove from equipment list
   hero.equipment.splice(equipIndex, 1);
@@ -134,16 +164,23 @@ function giveEquipmentToHero(hero, equip) {
   if (!hero.equipment) hero.equipment = [];
   hero.equipment.push(equip);
   
-  // Apply stat bonus
-  hero.atk += equip.stats.atk;
-  hero.def += equip.stats.def;
-  hero.spd += equip.stats.spd;
-  hero.maxHp += equip.stats.hp;
+  // Apply stat bonuses
+  if (equip.stats) {
+    Object.entries(equip.stats).forEach(([key, value]) => {
+      if (hero[key] !== undefined) {
+        hero[key] += value;
+      }
+    });
+  }
   
-  if (hero.hp + equip.stats.hp > hero.maxHp) {
-    hero.hp = hero.maxHp;
-  } else {
-    hero.hp += equip.stats.hp;
+  // Special handling for HP
+  if (equip.stats && equip.stats.hp) {
+    hero.maxHp += equip.stats.hp;
+    if (hero.hp + equip.stats.hp > hero.maxHp) {
+      hero.hp = hero.maxHp;
+    } else {
+      hero.hp += equip.stats.hp;
+    }
   }
   
   updateEquipmentDisplay(hero);
@@ -154,7 +191,7 @@ function updateHPUI(char) {
   if (char.element && char.hpFill) {
     char.hpFill.style.width = (char.hp / char.maxHp) * 100 + "%";
     char.element.querySelector(".stats").textContent =
-      `HP ${char.hp}/${char.maxHp}`;
+      `HP ${char.hp}/${char.maxHp} | Sta ${(char.sta || 0).toFixed(0)}/${char.maxSta || 0} | Mana ${(char.mana || 0).toFixed(0)}/${char.maxMana || 0}`;
   }
   
   // Also update grid HP if character is on grid
@@ -165,14 +202,18 @@ function updateHPUI(char) {
 
 function updateStatusUI(char) {
   let statusText = "";
-  if (char.status.burn > 0) statusText += "🔥Burn ";
-  if (char.status.bleeding > 0) statusText += "🩸Bleed ";
-  if (char.status.shield) statusText += "🛡Shield ";
-  if (char.status.stun > 0) statusText += "⚡Stun ";
-  if (char.status.paralyzed > 0) statusText += "💤Para ";
-  if (char.status.taunt) statusText += "🎯Taunt ";
-  if (char.status.critical > 0) statusText += "💥Crit ";
-  if (char.status.buffed > 0) statusText += "⭐Buff ";
+  
+  if (char.status) {
+    let activeStatuses = getActiveStatuses(char);
+    
+    activeStatuses.forEach(statusKey => {
+      let effect = StatusEffects[statusKey];
+      if (effect) {
+        statusText += effect.icon + " ";
+      }
+    });
+  }
+  
   if (char.element) {
     char.element.querySelector(".status").textContent = statusText;
   }

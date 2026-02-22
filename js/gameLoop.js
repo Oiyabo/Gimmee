@@ -5,58 +5,9 @@ let isBoss = false;
 let pendingRewards = [];
 
 function applyStatus(char, delta) {
-  // Apply burn damage
-  if (char.status.burn > 0) {
-    let prevBurn = char.status.burn;
-    char.status.burn -= delta;
-    if (Math.floor(char.status.burn * 10) % 10 === 0) {
-      let dmg = char.takeDamage(3);
-      if (dmg > 0) log(`${char.name} takes burn damage (${dmg})`);
-    }
-    if (prevBurn > 0 && char.status.burn <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Apply bleeding damage
-  if (char.status.bleeding > 0) {
-    let prevBleed = char.status.bleeding;
-    char.status.bleeding -= delta;
-    if (Math.floor(char.status.bleeding * 10) % 10 === 0) {
-      let dmg = char.takeDamage(2);
-      if (dmg > 0) log(`${char.name} takes bleeding damage (${dmg})`);
-    }
-    if (prevBleed > 0 && char.status.bleeding <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Apply stun
-  if (char.status.stun > 0) {
-    char.status.stun -= delta;
-    if (char.status.stun <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Apply paralysis
-  if (char.status.paralyzed > 0) {
-    char.status.paralyzed -= delta;
-    if (char.status.paralyzed <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Remove buff and restore stats
-  if (char.status.buffed > 0) {
-    char.status.buffed -= delta;
-    if (char.status.buffed <= 0) {
-      char.atk -= char.status.buffStats.atk;
-      char.def -= char.status.buffStats.def;
-      char.spd -= char.status.buffStats.spd;
-      updateStatusUI(char);
-    }
-  }
+  // Use comprehensive status effects system
+  updateStatusEffects(char, delta);
+  updateStatusUI(char);
 }
 
 function loop(ts) {

@@ -1,14 +1,53 @@
 class Character {
-  constructor(name, hp, atk, def, spd, team, skills) {
+  constructor(name, stats, team, skills) {
     this.name = name;
-    this.maxHp = hp;
-    this.hp = hp;
-    this.atk = atk;
-    this.origAtk = atk;
-    this.def = def;
-    this.origDef = def;
-    this.spd = spd;
-    this.origSpd = spd;
+    
+    // Health
+    this.maxHp = stats.hp;
+    this.hp = stats.hp;
+    
+    // Stamina (for physical skills)
+    this.maxSta = stats.sta;
+    this.sta = stats.sta;
+    
+    // Mana (for magical skills)
+    this.maxMana = stats.mana;
+    this.mana = stats.mana;
+    
+    // Physical Attack & Original
+    this.patk = stats.patk;
+    this.origPatk = stats.patk;
+    
+    // Magical Attack & Original
+    this.matk = stats.matk;
+    this.origMatk = stats.matk;
+    
+    // True Attack (ignores defenses) & Original
+    this.tatt = stats.tatt || 0;
+    this.origTatt = stats.tatt || 0;
+    
+    // Physical Defense & Original
+    this.pdef = stats.pdef;
+    this.origPdef = stats.pdef;
+    
+    // Magical Defense & Original
+    this.mdef = stats.mdef;
+    this.origMdef = stats.mdef;
+    
+    // Physical Speed (scaling for physical skill cooldown) & Original
+    this.pspd = stats.pspd;
+    this.origPspd = stats.pspd;
+    
+    // Magical Speed (scaling for magical skill cooldown) & Original
+    this.mspd = stats.mspd;
+    this.origMspd = stats.mspd;
+    
+    // Critical Chance (0-1 or 0-100 depending on use)
+    this.ccrit = stats.ccrit || 0.1;
+    
+    // Critical Damage (multiplier, e.g., 1.5 = 50% more damage)
+    this.dcrit = stats.dcrit || 1.5;
+    
     this.team = team;
     this.skills = skills;
     this.learnedSkills = [];
@@ -89,21 +128,28 @@ function generateRandomMonster(setNumber, monsterTemplates) {
   // Scale stats berdasarkan set number (difficulty increases)
   let scaling = 1 + setNumber * 0.1;
   
+  // Convert old template format to new stats format
+  const stats = {
+    hp: Math.floor(template.hp * scaling),
+    sta: Math.floor(template.hp * 0.8 * scaling),      // Stamina ~80% of HP
+    mana: Math.floor(template.hp * 0.4 * scaling),     // Mana ~40% of HP
+    patk: Math.floor(template.atk * scaling * 0.7),    // Physical ATK ~70%
+    matk: Math.floor(template.atk * scaling * 0.3),    // Magical ATK ~30%
+    tatt: Math.floor(template.atk * scaling * 0.1),    // True ATK ~10%
+    pdef: Math.floor(template.def * scaling),          // Physical DEF equal
+    mdef: Math.floor(template.def * scaling * 0.6),    // Magical DEF ~60%
+    pspd: template.spd,                                // Physical speed
+    mspd: template.spd * (0.7 + (setNumber * 0.02)),   // Magical speed lower
+    ccrit: 0.1,                                        // Critical chance 10%
+    dcrit: 1.3                                         // Critical damage 30%
+  };
+  
   let monster = new Character(
     name,
-    Math.floor(template.hp * scaling),
-    Math.floor(template.atk * scaling),
-    Math.floor(template.def * scaling),
-    template.spd * (1 + setNumber * 0.03),
+    stats,
     "B",
     [...template.skills]
   );
-  
-  // Simpan original stats untuk reset
-  monster.maxHp = monster.hp;
-  monster.origAtk = monster.atk;
-  monster.origDef = monster.def;
-  monster.origSpd = monster.spd;
   
   return monster;
 }
@@ -126,20 +172,28 @@ function generateBoss(round, area) {
   let templates = Object.entries(bossTemplates);
   let [name, template] = random(templates);
   
+  // Convert old template format to new stats format
+  const stats = {
+    hp: Math.floor(template.hp * bossScale),
+    sta: Math.floor(template.hp * 0.9 * bossScale),      // Stamina ~90% of HP (bosses hardy)
+    mana: Math.floor(template.hp * 0.5 * bossScale),     // Mana ~50% of HP
+    patk: Math.floor(template.atk * bossScale * 0.7),    // Physical ATK ~70%
+    matk: Math.floor(template.atk * bossScale * 0.3),    // Magical ATK ~30%
+    tatt: Math.floor(template.atk * bossScale * 0.15),   // True ATK ~15% (bosses stronger)
+    pdef: Math.floor(template.def * bossScale),          // Physical DEF equal
+    mdef: Math.floor(template.def * bossScale * 0.65),   // Magical DEF ~65%
+    pspd: template.spd,                                  // Physical speed maintained
+    mspd: template.spd * 0.75,                           // Magical speed bit lower
+    ccrit: 0.15,                                         // Boss critical chance 15%
+    dcrit: 1.6                                           // Boss critical damage 60%
+  };
+  
   let boss = new Character(
     `${name} (BOSS)`,
-    Math.floor(template.hp * bossScale),
-    Math.floor(template.atk * bossScale),
-    Math.floor(template.def * bossScale),
-    template.spd,
+    stats,
     "B",
     [...template.skills]
   );
-  
-  boss.maxHp = boss.hp;
-  boss.origAtk = boss.atk;
-  boss.origDef = boss.def;
-  boss.origSpd = boss.spd;
   
   return boss;
 }
