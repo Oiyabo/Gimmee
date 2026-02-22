@@ -69,6 +69,20 @@ class Character {
     this.hpFill = null;
     this.gridElement = null;
     this.gridPosition = null; // { row: 0-7, col: 0-7 }
+    this.exp = 0; // Experience points for buying stats
+    this.selectedSkills = skills.slice(0, 4); // Max 4 active skills (new system)
+    
+    // Equipment & Skill Slot System (New)
+    this.maxSkillSlots = 4;  // Maximum active skills
+    this.maxEquipSlots = 7;  // Maximum equipped items
+    
+    // Equipment enhancement tracking
+    this.equipmentLevels = {};  // { equipmentName: enhanceLevel }
+    if (this.equipment.length > 0) {
+      this.equipment.forEach(eq => {
+        this.equipmentLevels[eq.name] = 1; // Start at level 1
+      });
+    }
   }
   isAlive() {
     console.log(this.name, this.hp);
@@ -125,19 +139,20 @@ function generateRandomMonster(setNumber, monsterTemplates) {
   let templates = Object.entries(monsterTemplates);
   let [name, template] = random(templates);
   
-  // Scale stats berdasarkan set number (difficulty increases)
-  let scaling = 1 + setNumber * 0.1;
+  // Scale stats based on set number (difficulty increases) and difficulty setting
+  let baseScaling = 1 + setNumber * 0.1;
+  let finalScaling = baseScaling * (typeof difficultyScaling !== 'undefined' ? difficultyScaling : 1);
   
   // Convert old template format to new stats format
   const stats = {
-    hp: Math.floor(template.hp * scaling),
-    sta: Math.floor(template.hp * 0.8 * scaling),      // Stamina ~80% of HP
-    mana: Math.floor(template.hp * 0.4 * scaling),     // Mana ~40% of HP
-    patk: Math.floor(template.atk * scaling * 0.7),    // Physical ATK ~70%
-    matk: Math.floor(template.atk * scaling * 0.3),    // Magical ATK ~30%
-    tatt: Math.floor(template.atk * scaling * 0.1),    // True ATK ~10%
-    pdef: Math.floor(template.def * scaling),          // Physical DEF equal
-    mdef: Math.floor(template.def * scaling * 0.6),    // Magical DEF ~60%
+    hp: Math.floor(template.hp * finalScaling),
+    sta: Math.floor(template.hp * 0.8 * finalScaling),      // Stamina ~80% of HP
+    mana: Math.floor(template.hp * 0.4 * finalScaling),     // Mana ~40% of HP
+    patk: Math.floor(template.atk * finalScaling * 0.7),    // Physical ATK ~70%
+    matk: Math.floor(template.atk * finalScaling * 0.3),    // Magical ATK ~30%
+    tatt: Math.floor(template.atk * finalScaling * 0.1),    // True ATK ~10%
+    pdef: Math.floor(template.def * finalScaling),          // Physical DEF equal
+    mdef: Math.floor(template.def * finalScaling * 0.6),    // Magical DEF ~60%
     pspd: template.spd,                                // Physical speed
     mspd: template.spd * (0.7 + (setNumber * 0.02)),   // Magical speed lower
     ccrit: 0.1,                                        // Critical chance 10%
@@ -167,6 +182,7 @@ function generateBoss(round, area) {
   // Setiap area dan round memiliki boss yang berbeda
   let areaName = getAreaName(area);
   let bossScale = 1.5 + (area * 0.3) + (round * 0.2);
+  let finalBossScale = bossScale * (typeof difficultyScaling !== 'undefined' ? difficultyScaling : 1);
   
   let bossTemplates = BossTemplates[BaseAreas[area % 5]];
   let templates = Object.entries(bossTemplates);
@@ -174,14 +190,14 @@ function generateBoss(round, area) {
   
   // Convert old template format to new stats format
   const stats = {
-    hp: Math.floor(template.hp * bossScale),
-    sta: Math.floor(template.hp * 0.9 * bossScale),      // Stamina ~90% of HP (bosses hardy)
-    mana: Math.floor(template.hp * 0.5 * bossScale),     // Mana ~50% of HP
-    patk: Math.floor(template.atk * bossScale * 0.7),    // Physical ATK ~70%
-    matk: Math.floor(template.atk * bossScale * 0.3),    // Magical ATK ~30%
-    tatt: Math.floor(template.atk * bossScale * 0.15),   // True ATK ~15% (bosses stronger)
-    pdef: Math.floor(template.def * bossScale),          // Physical DEF equal
-    mdef: Math.floor(template.def * bossScale * 0.65),   // Magical DEF ~65%
+    hp: Math.floor(template.hp * finalBossScale),
+    sta: Math.floor(template.hp * 0.9 * finalBossScale),      // Stamina ~90% of HP (bosses hardy)
+    mana: Math.floor(template.hp * 0.5 * finalBossScale),     // Mana ~50% of HP
+    patk: Math.floor(template.atk * finalBossScale * 0.7),    // Physical ATK ~70%
+    matk: Math.floor(template.atk * finalBossScale * 0.3),    // Magical ATK ~30%
+    tatt: Math.floor(template.atk * finalBossScale * 0.15),   // True ATK ~15% (bosses stronger)
+    pdef: Math.floor(template.def * finalBossScale),          // Physical DEF equal
+    mdef: Math.floor(template.def * finalBossScale * 0.65),   // Magical DEF ~65%
     pspd: template.spd,                                  // Physical speed maintained
     mspd: template.spd * 0.75,                           // Magical speed bit lower
     ccrit: 0.15,                                         // Boss critical chance 15%

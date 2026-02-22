@@ -3,6 +3,25 @@ let running = false;
 let lastTime = 0;
 let isBoss = false;
 let pendingRewards = [];
+let inRestMode = false; // Track if currently in rest mode (allows equipment/skill changes)
+let currentDifficulty = "normal"; // relax, normal, focus
+let difficultyScaling = 1; // Difficulty multiplier for monsters
+
+// Settings
+let gameSettings = {
+  autoEquipSelect: false,
+  autoEquipPause: false,  // If true, don't pause during quick-rest
+  autoSkillSelect: false,
+  autoSkillPause: false   // If true, don't pause during long-rest
+};
+
+// Load settings from localStorage
+function loadSettings() {
+  let saved = localStorage.getItem('gameSettings');
+  if (saved) {
+    gameSettings = { ...gameSettings, ...JSON.parse(saved) };
+  }
+}
 
 function applyStatus(char, delta) {
   // Use comprehensive status effects system
@@ -67,6 +86,60 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
+// ===== REST SYSTEM =====
+function updateRestModeIndicator() {
+  const indicator = document.getElementById("rest-mode-indicator");
+  if (indicator) {
+    if (inRestMode) {
+      indicator.style.display = "block";
+    } else {
+      indicator.style.display = "none";
+    }
+  }
+}
+
+function quickRest(heroTeam, setNumber) {
+  // Quick rest: 25% HP + 2*set, and 30% + 3*set for Sta/Mana
+  let hpHeal = Math.floor(heroTeam[0].maxHp * 0.25) + (2 * setNumber);
+  let staRestore = 0;
+  let manaRestore = 0;
+  
+  heroTeam.forEach(h => {
+    // Heal HP
+    h.hp += hpHeal;
+    if (h.hp > h.maxHp) h.hp = h.maxHp;
+    
+    // Restore Stamina
+    staRestore = Math.floor(h.maxSta * 0.30) + (3 * setNumber);
+    h.sta += staRestore;
+    if (h.sta > h.maxSta) h.sta = h.maxSta;
+    
+    // Restore Mana
+    manaRestore = Math.floor(h.maxMana * 0.30) + (3 * setNumber);
+    h.mana += manaRestore;
+    if (h.mana > h.maxMana) h.mana = h.maxMana;
+    
+    log(`✨ ${h.name}: +${hpHeal} HP, +${staRestore} Sta, +${manaRestore} Mana`);
+    updateUI(h);
+  });
+}
+
+function longRest(heroTeam) {
+  // Long rest: Full heal and clear all negative effects
+  heroTeam.forEach(h => {
+    // Heal to full
+    h.hp = h.maxHp;
+    h.sta = h.maxSta;
+    h.mana = h.maxMana;
+    
+    // Clear all negative effects
+    clearAllStatuses(h);
+    
+    log(`⭐ ${h.name}: Fully healed and all negative effects cleared!`);
+    updateUI(h);
+  });
+}
+
 function collectRoundRewards() {
   log(`🎉 Round ${currentRound + 1} Complete!`);
   
@@ -75,18 +148,24 @@ function collectRoundRewards() {
   pendingRewards = [];
   
   if (isBoss) {
+    let expReward = 40 + currentArea * 10;
     let spPoints = 15 + currentArea * 5;
     heroes.forEach(h => {
       if (!h.statsPoints) h.statsPoints = 0;
       h.statsPoints += spPoints;
+      h.exp += expReward;
     });
+    rewardText += `+${expReward} EXP untuk setiap hero!\n`;
     rewardText += `+${spPoints} Stat Points untuk setiap hero! (BOSS REWARD)\n`;
   } else {
+    let expReward = 15 + currentSet * 3;
     let spPoints = 5 + currentSet * 2;
     heroes.forEach(h => {
       if (!h.statsPoints) h.statsPoints = 0;
       h.statsPoints += spPoints;
+      h.exp += expReward;
     });
+    rewardText += `+${expReward} EXP untuk setiap hero!\n`;
     rewardText += `+${spPoints} Stat Points untuk setiap hero!\n`;
   }
   
@@ -105,44 +184,53 @@ function collectRoundRewards() {
 function showRoundTransition(rewardText) {
   isRoundPaused = true;
   isPaused = true;
+  inRestMode = true; // Enable equipment/skill changes
+  updateRestModeIndicator();
   
   // Check if area complete (boss round is the 4th round)
   if (isBoss) {
     // Area complete
     showAreaTransition(rewardText);
   } else {
-    // Just round transition
-    document.getElementById("transition-title").textContent = `🎊 Round ${currentRound + 1} Complete!`;
-    document.getElementById("reward-text").textContent = rewardText + "\nHealing 25% HP and clearing negative status...";
+    // Just round transition - Apply quick rest
+    quickRest(heroes, currentSet);
     
-    let rewardHtml = pendingRewards.map(r => `<div class="reward-item"><div class="reward-item-name">${r}</div></div>`).join("");
-    document.getElementById("reward-items").innerHTML = rewardHtml;
+    let title = `🎊 Round ${currentRound + 1} Complete!`;
+    let text = rewardText + "\n\n🌙 Quick Rest: Stamina and Mana partially restored!";
     
-    document.getElementById("transition-modal").classList.add("active");
+    // Check if should skip UI due to auto-selection
+    if (gameSettings.autoEquipSelect && gameSettings.autoSkillSelect && gameSettings.autoEquipPause) {
+      // Skip choice UI, auto-apply and continue
+      autoApplyTransitionChoices();
+      continueFromTransition();
+    } else {
+      // Show choice UI in profile
+      openProfile(0); // Open profile UI first
+      showTransitionChoices(title, text);
+    }
   }
 }
 
 function showAreaTransition(rewardText) {
-  // Skill learning on area transition
-  let skillRewards = [];
-  let heroPromise = Math.floor(Math.random() * 2) + 1; // 1-2 heroes
-  for (let i = 0; i < heroPromise; i++) {
-    let hero = random(heroes);
-    let skillObj = getRandomSkillForHero(hero.name);
-    if (skillObj && !hero.skills.includes(skillObj.skill)) {
-      hero.skills.push(skillObj.skill);
-      skillRewards.push(`${hero.name} learned ${skillObj.name}!`);
-    }
+  inRestMode = true; // Enable equipment/skill changes
+  updateRestModeIndicator();
+  
+  // Apply long rest
+  longRest(heroes);
+  
+  let title = `🌟 Area ${currentArea + 1} Complete!`;
+  let fullText = rewardText + "\n\n🛏️ Long Rest: Fully healed and all negative effects cleared!";
+  
+  // Check if should skip UI due to auto-selection
+  if (gameSettings.autoEquipSelect && gameSettings.autoSkillSelect && gameSettings.autoSkillPause) {
+    // Skip choice UI, auto-apply and continue
+    autoApplyTransitionChoices();
+    continueFromTransition();
+  } else {
+    // Show choice UI in profile
+    openProfile(0); // Open profile UI first
+    showTransitionChoices(title, fullText);
   }
-  
-  document.getElementById("transition-title").textContent = `🌟 Area ${currentArea + 1} Complete!`;
-  let fullText = rewardText + "\n\n📚 New Skills Learned:\n" + skillRewards.join("\n") + "\n\nHealing 100% HP and clearing all negative effects...";
-  document.getElementById("reward-text").textContent = fullText;
-  
-  let rewardHtml = (pendingRewards.concat(skillRewards)).map(r => `<div class="reward-item"><div class="reward-item-name">${r}</div></div>`).join("");
-  document.getElementById("reward-items").innerHTML = rewardHtml;
-  
-  document.getElementById("transition-modal").classList.add("active");
 }
 
 function continueNextSet() {
@@ -198,6 +286,7 @@ function continueNextSet() {
 function nextRound() {
   isRoundPaused = false;
   document.getElementById("transition-modal").classList.remove("active");
+  inRestMode = false; // Exit rest mode
   
   // Check if area transition
   if (isBoss) {
@@ -211,23 +300,6 @@ function nextRound() {
     currentSpawnDirection = randomSpawnDirection();
     updateSpawnDirectionDisplay();
     
-    // Heal 100% and clear all status
-    heroes.forEach(h => {
-      h.hp = h.maxHp;
-      h.status = { 
-        burn: 0, 
-        shield: false, 
-        bleeding: 0, 
-        stun: 0, 
-        paralyzed: 0, 
-        taunt: false, 
-        critical: 0, 
-        buffed: 0,
-        buffStats: { atk: 0, def: 0, spd: 0 }
-      };
-      updateUI(h);
-    });
-    
     log(`\n🌟 Starting Area ${currentArea + 1}!\n`);
   } else {
     // Next normal round
@@ -237,18 +309,6 @@ function nextRound() {
     // Set new spawn direction for new round
     currentSpawnDirection = randomSpawnDirection();
     updateSpawnDirectionDisplay();
-    
-    // Heal 25% and clear negative status
-    heroes.forEach(h => {
-      h.hp = Math.floor(h.maxHp * 0.25) + h.hp;
-      if (h.hp > h.maxHp) h.hp = h.maxHp;
-      h.status.burn = 0;
-      h.status.bleeding = 0;
-      h.status.stun = 0;
-      h.status.paralyzed = 0;
-      h.status.taunt = false;
-      updateUI(h);
-    });
     
     // Check if next is boss round
     if (currentRound === 3) {
@@ -264,7 +324,20 @@ function nextRound() {
 }
 
 function continueFromTransition() {
+  // Apply the selected equipment and skill
+  applyTransitionChoices();
+  
+  // Hide choice UI
+  document.getElementById("profile-choice-content").classList.remove("show-choices");
+  document.getElementById("profile-normal-content").style.display = "flex";
+  
+  // Close profile
+  closeProfile();
+  
+  // Resume game
   isPaused = false;
+  inRestMode = false; // Exit rest mode, battle resuming
+  updateRestModeIndicator();
   nextRound();
 }
 
@@ -300,6 +373,17 @@ function showGameOverModal() {
   let text = `Game selesai di Area ${currentArea + 1}, Round ${currentRound + 1}, Set ${currentSet + 1}`;
   document.getElementById("gameover-text").textContent = text;
   document.getElementById("gameover-modal").classList.add("active");
+}
+
+function continueFromGameOver() {
+  // Just reset and start new game
+  resetGame();
+  startBattle();
+}
+
+function returnToMainMenu() {
+  resetGame();
+  document.getElementById("main-menu").classList.add("active");
 }
 
 function resetGame() {
@@ -371,8 +455,32 @@ function updateStageInfo() {
     `Area ${currentArea + 1} (${areaName}) - Round ${currentRound + 1} (${roundType}) - Set ${currentSet + 1}${pauseIndicator}`;
 }
 
+function startGameWithDifficulty(difficulty) {
+  currentDifficulty = difficulty;
+  
+  // Apply difficulty scaling
+  if (difficulty === "relax") {
+    difficultyScaling = 0.7;  // Monsters are 30% weaker
+  } else if (difficulty === "focus") {
+    difficultyScaling = 1.5;  // Monsters are 50% stronger
+  } else {
+    difficultyScaling = 1;    // Normal difficulty
+  }
+  
+  // Store difficulty (locked after selection)
+  localStorage.setItem('currentDifficulty', difficulty);
+  
+  // Close main menu and start battle
+  document.getElementById("main-menu").classList.remove("active");
+  loadSettings();
+  startBattle();
+}
+
 function startBattle() {
   petualanganAktif = true;
+  inRestMode = false; // Exit rest mode, battle is starting
+  updateRestModeIndicator();
+  closeProfile(); // Close profile if open
   
   // Clear grid occupancy only (keep hero blocks visual)
   gridOccupancy = {};
@@ -441,6 +549,8 @@ function updateSpawnDirectionDisplay() {
 }
 
 // Initialize on load
+loadSettings();
+initializeSettings();
 heroes.forEach(h => createUI(h, heroesContainer));
 updateStageInfo();
 initializeSpawnDirectionDisplay();

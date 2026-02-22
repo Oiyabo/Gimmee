@@ -15,9 +15,68 @@
     <script src="js/gameLoop.js" defer></script>
   </head>
   <body>
+    <!-- Main Menu -->
+    <div id="main-menu" class="main-menu active">
+      <div class="menu-content">
+        <h1>⚔️ Automatic Battle RPG</h1>
+        <p>Select Difficulty</p>
+        <div class="difficulty-buttons">
+          <button onclick="startGameWithDifficulty('relax')" class="difficulty-btn">
+            🌸 RELAX<br><small>Easier battles</small>
+          </button>
+          <button onclick="startGameWithDifficulty('normal')" class="difficulty-btn">
+            ⚔️ NORMAL<br><small>Balanced difficulty</small>
+          </button>
+          <button onclick="startGameWithDifficulty('focus')" class="difficulty-btn">
+            🔥 FOCUS<br><small>Harder battles</small>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Battle Log Tab (Left Side) -->
+    <div id="battle-log-tab" class="battle-log-tab">
+      <button id="log-toggle-btn" class="log-toggle-btn" onclick="toggleBattleLog()">📋</button>
+      <div id="battle-log" class="log" style="display:none;"></div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel">
+      <button class="close-settings-btn" onclick="closeSettings()">✕</button>
+      <h3>⚙️ Settings</h3>
+      <div class="settings-content">
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="auto-eq-select" onchange="saveSettings()">
+            Auto-select Equipment
+          </label>
+          <small>Automatically choose equipment during transitions</small>
+          <label class="indent" id="auto-eq-pause-label" style="display:none;">
+            <input type="checkbox" id="auto-eq-pause" onchange="saveSettings()">
+            Don't pause during quick-rest
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="auto-sk-select" onchange="saveSettings()">
+            Auto-select Skill
+          </label>
+          <small>Automatically choose skill during transitions</small>
+          <label class="indent" id="auto-sk-pause-label" style="display:none;">
+            <input type="checkbox" id="auto-sk-pause" onchange="saveSettings()">
+            Don't pause during long-rest
+          </label>
+        </div>
+      </div>
+    </div>
+
     <div class="game">
       <h1>⚔ Area > Round > Set Battle System</h1>
       <div id="stage-info" class="stage-info">Area 1 - Round 1 - Set 1</div>
+      <div id="rest-mode-indicator" class="rest-mode-indicator" style="display:none;">
+        💤 REST MODE - You can change equipment, enhance stats, or modify skills now!
+      </div>
       <div class="battlefield">
         <!-- Battle Map Grid 8x8 -->
         <div class="battle-map-section">
@@ -41,24 +100,89 @@
         <button id="start-btn" onclick="startBattle()">Start Battle</button>
         <button id="pause-btn" onclick="togglePause()" style="display:none;">⏸ Pause (SPACE)</button>
         <button id="next-round-btn" style="display:none;" onclick="nextRound()">➡ Next Round</button>
+        <button id="settings-btn" class="settings-btn" onclick="openSettings()">⚙️</button>
       </div>
-      <div class="log" id="battle-log"></div>
     </div>
 
-    <!-- Shop / Equipment Tab at Bottom -->
-    <div class="shop-tab-container">
-      <div class="shop-tabs">
-        <button class="shop-tab-btn active" onclick="switchTab('stats')">📊 Stats</button>
-        <button class="shop-tab-btn" onclick="switchTab('equipment')">⚔ Equipment</button>
+    <!-- Profile Panel at Bottom -->
+    <div id="profile-container" class="profile-container">
+      <div class="profile-header">
+        <h2 id="profile-name">Select a Hero</h2>
+        <button class="close-profile-btn" onclick="closeProfile()">✕</button>
       </div>
-      <div id="stats-tab" class="shop-tab-content active">
-        <h3>Upgrade Stats</h3>
-        <div id="upgrade-list"></div>
+      
+      <div class="profile-content" id="profile-normal-content">
+        <!-- Left: Stats and Equipment -->
+        <div class="profile-left">
+          <!-- Stats Section -->
+          <div class="profile-section">
+            <h3>📊 Base Stats</h3>
+            <div id="profile-base-stats" class="profile-stats-grid"></div>
+          </div>
+          
+          <!-- Equipment Section -->
+          <div class="profile-section">
+            <h3>⚔️ Equipment</h3>
+            <div id="profile-equipment-list" class="profile-equipment-items"></div>
+          </div>
+        </div>
+        
+        <!-- Right: Skills and Buying -->
+        <div class="profile-right">
+          <!-- Skills Section -->
+          <div class="profile-section">
+            <h3>🔮 Skills</h3>
+            <div id="profile-skills-list" class="profile-skills-items"></div>
+            <div id="skill-description" class="description-panel" style="display:none;">
+              <h4 id="skill-desc-name"></h4>
+              <p id="skill-desc-text"></p>
+            </div>
+          </div>
+          
+          <!-- Buy Stats Section -->
+          <div class="profile-section">
+            <h3>💰 Upgrade Stats (EXP: <span id="profile-exp">0</span>)</h3>
+            <div id="profile-buy-stats" class="profile-buy-items"></div>
+          </div>
+          
+          <!-- Item Description -->
+          <div id="item-description" class="description-panel" style="display:none;">
+            <h4 id="item-desc-name"></h4>
+            <p id="item-desc-stats"></p>
+            <p id="item-desc-ability"></p>
+            <p id="item-desc-lore"></p>
+          </div>
+        </div>
       </div>
-      <div id="equipment-tab" class="shop-tab-content">
-        <h3>Equipment Inventory</h3>
-        <div id="equipment-list"></div>
+
+      <!-- Equipment & Skill Choice UI (shows during transitions) -->
+      <div class="profile-content" id="profile-choice-content" style="display:none;">
+        <!-- Transition Title -->
+        <div class="profile-section" style="grid-column: 1/-1; text-align: center;">
+          <h2 id="transition-title" style="margin: 8px 0;">Transition</h2>
+          <p id="transition-rewards" style="font-size: 10px; color: #cbd5e1; margin: 4px 0;"></p>
+        </div>
+
+        <!-- Equipment Choice -->
+        <div class="profile-section">
+          <h3>🎁 Choose Equipment</h3>
+          <div id="eq-choice-list" class="profile-equipment-items"></div>
+        </div>
+
+        <!-- Skill Choice -->
+        <div class="profile-section">
+          <h3>📚 Choose Skill</h3>
+          <div id="sk-choice-list" class="profile-skills-items"></div>
+        </div>
+
+        <!-- Continue Button -->
+        <div class="profile-section" style="grid-column: 1/-1; text-align: center; margin-top: 8px;">
+          <button onclick="continueFromTransition()" style="width: 80%; padding: 8px; font-size: 12px; background: #10b981; cursor: pointer;" id="continue-btn" disabled>
+            ➡ Continue (Select both)
+          </button>
+        </div>
       </div>
+    </div>
     </div>
 
     <!-- Round/Area Pause Modal -->
@@ -78,7 +202,10 @@
       <div class="modal-content">
         <h2>💀 GAME OVER</h2>
         <p id="gameover-text"></p>
-        <button class="btn-continue" onclick="resetGame()">Restart</button>
+        <div class="modal-buttons">
+          <button class="btn-continue" onclick="continueFromGameOver()">↻ Try Again</button>
+          <button class="btn-continue" onclick="returnToMainMenu()">🏠 Main Menu</button>
+        </div>
       </div>
     </div>
   </body>
