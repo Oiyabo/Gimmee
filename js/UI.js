@@ -764,9 +764,9 @@ function generateEquipmentChoices() {
   if (pendingRewards && pendingRewards.length > 0) {
     pendingRewards.forEach(itemName => {
       let found = false;
-      for (let rarity in EquipmentList) {
+      for (let rarity in EquipmentByRarity) {
         if (found) break;
-        for (let item of EquipmentList[rarity]) {
+        for (let item of EquipmentByRarity[rarity]) {
           if (item.name === itemName) {
             allEquipping.push({ ...item });
             found = true;

@@ -29,6 +29,7 @@ class Character {
     // Physical Defense & Original
     this.pdef = stats.pdef;
     this.origPdef = stats.pdef;
+    this.def = stats.pdef; // Generic defense for takeDamage method
     
     // Magical Defense & Original
     this.mdef = stats.mdef;

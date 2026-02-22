@@ -97,7 +97,9 @@ function loop(ts) {
         let allies = c.team === "A" ? heroes : monsters;
         let enemies = c.team === "A" ? monsters : heroes;
         let skill = random(c.skills);
-        skill(c, allies, enemies);
+        if (skill && skill.effect) {
+          skill.effect(c, allies, enemies);
+        }
         c.cooldown = 1 / c.pspd; // Use physical speed as base
         lastSkillExecutionTime = now;
       }
@@ -445,9 +447,16 @@ function resetGame() {
   // Reset heroes
   heroes.forEach(h => {
     h.hp = h.maxHp;
-    h.atk = h.origAtk;
-    h.def = h.origDef;
-    h.spd = h.origSpd;
+    h.sta = h.maxSta;
+    h.mana = h.maxMana;
+    h.patk = h.origPatk;
+    h.matk = h.origMatk;
+    h.tatt = h.origTatt;
+    h.pdef = h.origPdef;
+    h.mdef = h.origMdef;
+    h.def = h.origPdef; // Reset generic defense to physical defense
+    h.pspd = h.origPspd;
+    h.mspd = h.origMspd;
     h.cooldown = 0;
     h.statsPoints = 0;
     h.equipment = [];
