@@ -80,6 +80,26 @@ h1 {
     color: #60a5fa;
 }
 
+.spawn-direction {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fbbf24;
+    background: #1e293b;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border: 2px solid #78350f;
+    min-height: 20px;
+    transition: all 0.3s ease;
+}
+
+.spawn-direction:hover {
+    background: #0f172a;
+    border-color: #fcd34d;
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+
 .battle-map-grid {
     display: grid;
     grid-template-columns: repeat(8, 1fr);

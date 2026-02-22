@@ -226,10 +226,17 @@ function continueNextSet() {
   
   monsters.forEach(m => createUI(m, monstersContainer));
   
-  // Place new monsters on grid (right side, distribute from top)
+  // Keep using same spawn direction for entire round (3 sets)
+  // Direction only changes when nextRound() is called
   monsters.forEach((m, idx) => {
-    let row = idx * 2;
-    placeCharacterOnGrid(m, row, 7);
+    let pos = getRandomSpawnPosition(currentSpawnDirection);
+    // Try to place, if occupied find nearby empty spot
+    let attempts = 0;
+    while (gridOccupancy[getGridKey(pos.row, pos.col)] && attempts < 3) {
+      pos = getRandomSpawnPosition(currentSpawnDirection);
+      attempts++;
+    }
+    placeCharacterOnGrid(m, pos.row, pos.col);
   });
   
   running = true;
@@ -248,6 +255,10 @@ function nextRound() {
     currentRound = 0;
     currentSet = 0;
     isBoss = false;
+    
+    // Set new spawn direction for next area round 1
+    currentSpawnDirection = randomSpawnDirection();
+    updateSpawnDirectionDisplay();
     
     // Heal 100% and clear all status
     heroes.forEach(h => {
@@ -271,6 +282,10 @@ function nextRound() {
     // Next normal round
     currentRound++;
     currentSet = 0;
+    
+    // Set new spawn direction for new round
+    currentSpawnDirection = randomSpawnDirection();
+    updateSpawnDirectionDisplay();
     
     // Heal 25% and clear negative status
     heroes.forEach(h => {
@@ -408,18 +423,18 @@ function updateStageInfo() {
 function startBattle() {
   petualanganAktif = true;
   
-  // Clear grid occupancy (grid DOM already exists from page load)
+  // Clear grid occupancy only (keep hero blocks visual)
   gridOccupancy = {};
-  // Clear all placement blocks
-  for (let i = 0; i < GRID_TOTAL; i++) {
-    const row = Math.floor(i / GRID_SIZE);
-    const col = i % GRID_SIZE;
-    const block = document.getElementById(`grid-${row}-${col}`);
-    if (block) {
-      block.innerHTML = "";
-      block.classList.remove("occupied");
+  
+  // Restore heroes to grid from their page load positions
+  heroes.forEach(h => {
+    if (h.gridPosition) {
+      heroStartPositions[h.name] = { ...h.gridPosition };
+      // Re-occupy grid for heroes
+      const key = getGridKey(h.gridPosition.row, h.gridPosition.col);
+      gridOccupancy[key] = h;
     }
-  }
+  });
   
   // Generate first monster set
   let areaName = getAreaName(currentArea);
@@ -428,25 +443,19 @@ function startBattle() {
   monsters = generateMonsterTeam(currentSet, monsterTemplates);
   monsters.forEach(m => createUI(m, monstersContainer));
   
-  // Place heroes on grid (left side, distribute evenly)
-  let heroStartCols = [0, 1];
-  heroes.forEach((h, idx) => {
-    let row = idx % 4;
-    let col = heroStartCols[Math.floor(idx / 4)];
-    placeCharacterOnGrid(h, row * 2, col);
-  });
+  // Use existing spawn direction (already set at page load)
+  log(`🧭 Musuh datang dari: ${currentSpawnDirection}`);
   
-  // Place monsters on grid (right side)
+  // Place monsters on grid (random within spawn zone)
   monsters.forEach((m, idx) => {
-    let row = idx * 2;
-    placeCharacterOnGrid(m, row, 7);
-  });
-  
-  // Store hero starting positions
-  heroes.forEach(h => {
-    if (h.gridPosition) {
-      heroStartPositions[h.name] = { ...h.gridPosition };
+    let pos = getRandomSpawnPosition(currentSpawnDirection);
+    // Try to place, if occupied find nearby empty spot
+    let attempts = 0;
+    while (gridOccupancy[getGridKey(pos.row, pos.col)] && attempts < 3) {
+      pos = getRandomSpawnPosition(currentSpawnDirection);
+      attempts++;
     }
+    placeCharacterOnGrid(m, pos.row, pos.col);
   });
   
   updateStageInfo();
@@ -462,12 +471,43 @@ function startBattle() {
   requestAnimationFrame(loop);
 }
 
+// Function to update spawn direction display
+function updateSpawnDirectionDisplay() {
+  const directionMap = {
+    N: "⬆️ Utara",
+    NE: "↗️ Timur Laut",
+    E: "➡️ Timur",
+    SE: "↘️ Tenggara",
+    S: "⬇️ Selatan",
+    SW: "↙️ Barat Daya",
+    W: "⬅️ Barat",
+    NW: "↖️ Barat Laut"
+  };
+  const indicator = document.getElementById("spawn-direction-indicator");
+  if (indicator) {
+    indicator.textContent = directionMap[currentSpawnDirection] || "🧭 --";
+  }
+}
+
 // Initialize on load
 heroes.forEach(h => createUI(h, heroesContainer));
 updateStageInfo();
+initializeSpawnDirectionDisplay();
+
+// Initialize function untuk spawn direction display
+function initializeSpawnDirectionDisplay() {
+  const indicator = document.getElementById("spawn-direction-indicator");
+  if (indicator) {
+    indicator.textContent = "🧭 --";
+  }
+}
 
 // Initialize grid at page load
 initializeGrid();
+
+// Set initial spawn direction for round 1 (before battle starts)
+currentSpawnDirection = randomSpawnDirection();
+updateSpawnDirectionDisplay();
 
 // Place heroes on grid from page load
 let heroStartCols = [0, 1];

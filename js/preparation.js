@@ -150,6 +150,66 @@ const GRID_TOTAL = GRID_SIZE * GRID_SIZE; // 64
 let gridOccupancy = {}; // { "row-col": characterObject }
 let heroStartPositions = {}; // Simpan posisi awal heroes saat battle dimulai
 
+// Compass directions for monster spawning
+const SPAWN_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+let currentSpawnDirection = "E"; // Default spawn direction
+
+// Get random spawn direction
+function randomSpawnDirection() {
+  return SPAWN_DIRECTIONS[Math.floor(Math.random() * SPAWN_DIRECTIONS.length)];
+}
+
+// Get spawn zone based on direction
+function getSpawnZone(direction) {
+  const zones = {
+    N: { rowRange: [0, 2], colRange: [3, 4] },      // Center top
+    NE: { rowRange: [0, 2], colRange: [5, 7] },     // Top right
+    E: { rowRange: [2, 5], colRange: [5, 7] },      // Right center
+    SE: { rowRange: [5, 7], colRange: [5, 7] },     // Bottom right
+    S: { rowRange: [5, 7], colRange: [3, 4] },      // Center bottom
+    SW: { rowRange: [5, 7], colRange: [0, 2] },     // Bottom left
+    W: { rowRange: [2, 5], colRange: [0, 2] },      // Left center
+    NW: { rowRange: [0, 2], colRange: [0, 2] }      // Top left
+  };
+  return zones[direction] || zones.E;
+}
+
+// Generate random position within spawn zone
+function getRandomSpawnPosition(direction) {
+  const zone = getSpawnZone(direction);
+  const row = Math.floor(Math.random() * (zone.rowRange[1] - zone.rowRange[0] + 1)) + zone.rowRange[0];
+  const col = Math.floor(Math.random() * (zone.colRange[1] - zone.colRange[0] + 1)) + zone.colRange[0];
+  return { row, col };
+}
+
+// Calculate distance between two grid positions
+function calculateDistance(pos1, pos2) {
+  const rowDiff = Math.abs(pos1.row - pos2.row);
+  const colDiff = Math.abs(pos1.col - pos2.col);
+  // Euclidean distance
+  return Math.sqrt(rowDiff * rowDiff + colDiff * colDiff);
+}
+
+// Get nearest character(s) from targets
+function getNearestTargets(attacker, targets) {
+  if (!attacker.gridPosition || targets.length === 0) return targets;
+  
+  const targetsWithDistance = targets.map(target => ({
+    character: target,
+    distance: calculateDistance(attacker.gridPosition, target.gridPosition)
+  }));
+  
+  // Sort by distance (nearest first)
+  targetsWithDistance.sort((a, b) => a.distance - b.distance);
+  
+  // Return only the nearest target(s), with higher probability for closest
+  const nearest = targetsWithDistance[0];
+  if (nearest) {
+    return [nearest.character];
+  }
+  return targets;
+}
+
 function initializeGrid() {
   gridOccupancy = {};
   heroStartPositions = {};
