@@ -29,6 +29,8 @@ function applyStatus(char, delta) {
   updateStatusUI(char);
 }
 
+let lastSkillExecutionTime = 0;
+
 function loop(ts) {
   if (!running) return;
   
@@ -54,34 +56,60 @@ function loop(ts) {
   }
   
   if (aliveMonsters.length === 0) {
-    // Victory in this set
+    // Victory in this set - Award experience to heroes
+    monsters.forEach(monster => {
+      if (monster.expReward) {
+        // Distribute experience to all alive heroes equally
+        let heroShare = Math.floor(monster.expReward / aliveHeroes.length);
+        aliveHeroes.forEach(hero => {
+          hero.exp += heroShare;
+          log(`⭐ ${hero.name} gained ${heroShare} EXP from ${monster.name}`);
+        });
+      }
+    });
+    
     running = false;
     currentSet++;
     
-    // Check if round complete (3 sets per normal round, 1 set per boss round)
-    let setPerRound = isBoss ? 1 : 3;
-    if (currentSet % setPerRound === 0) {
-      // Round complete - Pause and show rewards
-      collectRoundRewards();
-    } else {
-      // Next set in same round - Continue immediately with 10% heal
-      continueNextSet();
-    }
+    // Add battle speed delay
+    setTimeout(() => {
+      // Check if round complete (3 sets per normal round, 1 set per boss round)
+      let setPerRound = isBoss ? 1 : 3;
+      if (currentSet % setPerRound === 0) {
+        // Round complete - Pause and show rewards
+        collectRoundRewards();
+      } else {
+        // Next set in same round - Continue immediately with 10% heal
+        continueNextSet();
+      }
+    }, BATTLE_CONFIG.transitionDelay);
     return;
   }
 
-  [...heroes, ...monsters].forEach((c) => {
-    if (!c.isAlive()) return;
-    applyStatus(c, delta);
-    c.cooldown -= delta;
-    if (c.cooldown <= 0 && c.status.stun <= 0) {
-      let allies = c.team === "A" ? heroes : monsters;
-      let enemies = c.team === "A" ? monsters : heroes;
-      let skill = random(c.skills);
-      skill(c, allies, enemies);
-      c.cooldown = 1 / c.spd;
-    }
-  });
+  // Apply status and execute skills with rate limiting
+  let now = performance.now();
+  if (now - lastSkillExecutionTime > BATTLE_CONFIG.skillExecutionDelay) {
+    [...heroes, ...monsters].forEach((c) => {
+      if (!c.isAlive()) return;
+      applyStatus(c, delta);
+      c.cooldown -= delta;
+      if (c.cooldown <= 0 && c.status.stun <= 0) {
+        let allies = c.team === "A" ? heroes : monsters;
+        let enemies = c.team === "A" ? monsters : heroes;
+        let skill = random(c.skills);
+        skill(c, allies, enemies);
+        c.cooldown = 1 / c.pspd; // Use physical speed as base
+        lastSkillExecutionTime = now;
+      }
+    });
+  } else {
+    // Apply status effects even if skills aren't executing
+    [...heroes, ...monsters].forEach((c) => {
+      if (!c.isAlive()) return;
+      applyStatus(c, delta);
+      c.cooldown -= delta;
+    });
+  }
   
   requestAnimationFrame(loop);
 }

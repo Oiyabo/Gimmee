@@ -280,32 +280,18 @@ function updateUI(char) {
 // ===== PROFILE SYSTEM =====
 let currentProfile = null; // Index of currently viewed hero
 
-// Pricing system for stats - increases with purchases
-const StatPricing = {
-  maxHp: { base: 5, increment: 2 },
-  maxSta: { base: 4, increment: 1.5 },
-  maxMana: { base: 4, increment: 1.5 },
-  patk: { base: 6, increment: 2 },
-  matk: { base: 6, increment: 2 },
-  pdef: { base: 5, increment: 1.5 },
-  mdef: { base: 5, increment: 1.5 }
-};
+// Track purchases per hero for dynamic pricing
+let heroPurchases = {};
 
-// Track purchases to calculate dynamic prices
-let statPurchases = {
-  maxHp: 0,
-  maxSta: 0,
-  maxMana: 0,
-  patk: 0,
-  matk: 0,
-  pdef: 0,
-  mdef: 0
-};
-
-function getStatPrice(statType) {
-  let config = StatPricing[statType];
-  if (!config) return 0;
-  return Math.floor(config.base + (config.increment * statPurchases[statType]));
+function getStatPrice(heroIdx, statType) {
+  // Initialize hero purchase tracking if needed
+  if (!heroPurchases[heroIdx]) {
+    heroPurchases[heroIdx] = {};
+  }
+  let purchaseCount = heroPurchases[heroIdx][statType] || 0;
+  
+  // Use configuration-based pricing
+  return getStatCost(statType, purchaseCount, currentDifficulty);
 }
 
 function openProfile(heroIndex) {
@@ -438,7 +424,7 @@ function updateProfileBuyStats(hero) {
   document.getElementById("profile-exp").textContent = hero.exp;
   
   statsTypes.forEach(stat => {
-    let price = getStatPrice(stat.key);
+    let price = getStatPrice(currentProfile, stat.key);
     let canBuy = hero.exp >= price;
     let priceClass = canBuy ? '' : 'unavailable';
     
@@ -546,7 +532,7 @@ function buyStatFromProfile(heroIdx, statType) {
   }
   
   let hero = heroes[heroIdx];
-  let price = getStatPrice(statType);
+  let price = getStatPrice(heroIdx, statType);
   
   if (hero.exp < price) {
     alert(`❌ Not enough EXP! Need ${price}, have ${hero.exp}`);
@@ -555,9 +541,12 @@ function buyStatFromProfile(heroIdx, statType) {
   
   // Deduct EXP
   hero.exp -= price;
-  statPurchases[statType]++;
   
-  // Increase stat
+  // Track purchase for this hero and stat type
+  if (!heroPurchases[heroIdx]) heroPurchases[heroIdx] = {};
+  heroPurchases[heroIdx][statType] = (heroPurchases[heroIdx][statType] || 0) + 1;
+  
+  // Increase stat (amounts vary by stat type)
   if (statType === 'maxHp') {
     hero.maxHp += 10;
     hero.hp = Math.min(hero.hp + 10, hero.maxHp);

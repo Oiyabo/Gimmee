@@ -139,24 +139,39 @@ function generateRandomMonster(setNumber, monsterTemplates) {
   let templates = Object.entries(monsterTemplates);
   let [name, template] = random(templates);
   
-  // Scale stats based on set number (difficulty increases) and difficulty setting
-  let baseScaling = 1 + setNumber * 0.1;
-  let finalScaling = baseScaling * (typeof difficultyScaling !== 'undefined' ? difficultyScaling : 1);
+  // Get difficulty configuration
+  const diffConfig = getDifficultyConfig(currentDifficulty);
   
-  // Convert old template format to new stats format
+  // Calculate base scaling from set progression
+  let baseScaling = 1 + setNumber * MONSTER_CONFIG.baseScalingPerSet;
+  
+  // Calculate area scaling growth
+  let areaGrowth = 1 + (currentArea * MONSTER_CONFIG.baseAreaGrowth);
+  
+  // Apply difficulty scaling
+  let difficultyScaling = diffConfig.monsterScaling;
+  
+  // Combined final scaling
+  let finalScaling = baseScaling * areaGrowth * difficultyScaling;
+  
+  // Add randomization (±20% variation)
+  let variation = 1 + (Math.random() - 0.5) * 2 * MONSTER_CONFIG.statVariation;
+  finalScaling *= variation;
+  
+  // Convert old template format to new stats format with randomization
   const stats = {
     hp: Math.floor(template.hp * finalScaling),
-    sta: Math.floor(template.hp * 0.8 * finalScaling),      // Stamina ~80% of HP
-    mana: Math.floor(template.hp * 0.4 * finalScaling),     // Mana ~40% of HP
-    patk: Math.floor(template.atk * finalScaling * 0.7),    // Physical ATK ~70%
-    matk: Math.floor(template.atk * finalScaling * 0.3),    // Magical ATK ~30%
-    tatt: Math.floor(template.atk * finalScaling * 0.1),    // True ATK ~10%
-    pdef: Math.floor(template.def * finalScaling),          // Physical DEF equal
-    mdef: Math.floor(template.def * finalScaling * 0.6),    // Magical DEF ~60%
-    pspd: template.spd,                                // Physical speed
-    mspd: template.spd * (0.7 + (setNumber * 0.02)),   // Magical speed lower
-    ccrit: 0.1,                                        // Critical chance 10%
-    dcrit: 1.3                                         // Critical damage 30%
+    sta: Math.floor(template.hp * 0.8 * finalScaling),
+    mana: Math.floor(template.hp * 0.4 * finalScaling),
+    patk: Math.floor(template.atk * finalScaling * 0.7),
+    matk: Math.floor(template.atk * finalScaling * 0.3),
+    tatt: Math.floor(template.atk * finalScaling * 0.1),
+    pdef: Math.floor(template.def * finalScaling),
+    mdef: Math.floor(template.def * finalScaling * 0.6),
+    pspd: template.spd,
+    mspd: template.spd * (0.7 + (setNumber * 0.02)),
+    ccrit: 0.1,
+    dcrit: 1.3
   };
   
   let monster = new Character(
@@ -165,6 +180,21 @@ function generateRandomMonster(setNumber, monsterTemplates) {
     "B",
     [...template.skills]
   );
+  
+  // Randomize skills with some variation
+  if (template.skills && template.skills.length > 0) {
+    if (Math.random() < MONSTER_CONFIG.skillRandomChance && monster.selectedSkills.length < MONSTER_CONFIG.maxSkillsPerMonster) {
+      // Get all available skills and pick a random one
+      let allSkills = Object.values(Skills);
+      let randomSkill = random(allSkills);
+      if (!monster.selectedSkills.find(s => s.name === randomSkill.name)) {
+        monster.selectedSkills.push(randomSkill);
+      }
+    }
+  }
+  
+  // Calculate experience reward based on final monster strength
+  monster.expReward = calculateMonsterExperience(monster, currentDifficulty);
   
   return monster;
 }
@@ -181,8 +211,19 @@ function generateMonsterTeam(setNumber, monsterTemplates) {
 function generateBoss(round, area) {
   // Setiap area dan round memiliki boss yang berbeda
   let areaName = getAreaName(area);
-  let bossScale = 1.5 + (area * 0.3) + (round * 0.2);
-  let finalBossScale = bossScale * (typeof difficultyScaling !== 'undefined' ? difficultyScaling : 1);
+  
+  // Get difficulty configuration
+  const diffConfig = getDifficultyConfig(currentDifficulty);
+  
+  // Calculate boss scaling with difficulty
+  let bossBaseScale = MONSTER_CONFIG.bossBaseMultiplier;
+  let areaBonus = (area * MONSTER_CONFIG.bossAreaScaling);
+  let roundBonus = (round * MONSTER_CONFIG.bossSetScaling);
+  let finalBossScale = (bossBaseScale + areaBonus + roundBonus) * diffConfig.monsterScaling;
+  
+  // Add randomization for variety
+  let variation = 1 + (Math.random() - 0.5) * 2 * MONSTER_CONFIG.statVariation;
+  finalBossScale *= variation;
   
   let bossTemplates = BossTemplates[BaseAreas[area % 5]];
   let templates = Object.entries(bossTemplates);
@@ -191,17 +232,17 @@ function generateBoss(round, area) {
   // Convert old template format to new stats format
   const stats = {
     hp: Math.floor(template.hp * finalBossScale),
-    sta: Math.floor(template.hp * 0.9 * finalBossScale),      // Stamina ~90% of HP (bosses hardy)
-    mana: Math.floor(template.hp * 0.5 * finalBossScale),     // Mana ~50% of HP
-    patk: Math.floor(template.atk * finalBossScale * 0.7),    // Physical ATK ~70%
-    matk: Math.floor(template.atk * finalBossScale * 0.3),    // Magical ATK ~30%
-    tatt: Math.floor(template.atk * finalBossScale * 0.15),   // True ATK ~15% (bosses stronger)
-    pdef: Math.floor(template.def * finalBossScale),          // Physical DEF equal
-    mdef: Math.floor(template.def * finalBossScale * 0.65),   // Magical DEF ~65%
-    pspd: template.spd,                                  // Physical speed maintained
-    mspd: template.spd * 0.75,                           // Magical speed bit lower
-    ccrit: 0.15,                                         // Boss critical chance 15%
-    dcrit: 1.6                                           // Boss critical damage 60%
+    sta: Math.floor(template.hp * 0.9 * finalBossScale),
+    mana: Math.floor(template.hp * 0.5 * finalBossScale),
+    patk: Math.floor(template.atk * finalBossScale * 0.7),
+    matk: Math.floor(template.atk * finalBossScale * 0.3),
+    tatt: Math.floor(template.atk * finalBossScale * 0.15),
+    pdef: Math.floor(template.def * finalBossScale),
+    mdef: Math.floor(template.def * finalBossScale * 0.65),
+    pspd: template.spd,
+    mspd: template.spd * 0.75,
+    ccrit: 0.15,
+    dcrit: 1.6
   };
   
   let boss = new Character(
@@ -210,6 +251,9 @@ function generateBoss(round, area) {
     "B",
     [...template.skills]
   );
+  
+  // Calculate boss experience reward (higher since it's harder)
+  boss.expReward = Math.floor(calculateMonsterExperience(boss, currentDifficulty) * 2);
   
   return boss;
 }
