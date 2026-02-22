@@ -1,91 +1,68 @@
-// ===== HERO DEFINITIONS =====
-const HERO_TEMPLATES = {
-  knight: {
-    name: "Knight",
-    stats: {
-      maxHp: 130, maxSta: 60, maxMana: 20,
-      patk: 18, matk: 8, pdef: 8, mdef: 4,
-      tatt: 0, pspd: 0.9, mspd: 0.8,
-      ccrit: 0.08, dcrit: 1.3
-    },
-    initialSkills: ["knightSlash", "shieldBarrier", "defensiveStance", "heavySwing"]
-  },
-  priest: {
-    name: "Priest",
-    stats: {
-      maxHp: 90, maxSta: 40, maxMana: 80,
-      patk: 8, matk: 14, pdef: 4, mdef: 8,
-      tatt: 0, pspd: 0.9, mspd: 1.2,
-      ccrit: 0.05, dcrit: 1.2
-    },
-    initialSkills: ["holyHeal", "blessings", "resurrection", "divineShield"]
-  },
-  mage: {
-    name: "Mage",
-    stats: {
-      maxHp: 70, maxSta: 30, maxMana: 100,
-      patk: 6, matk: 26, pdef: 2, mdef: 6,
-      tatt: 0, pspd: 0.8, mspd: 1.3,
-      ccrit: 0.10, dcrit: 1.5
-    },
-    initialSkills: ["inferno", "lightingStrike", "frostbolt", "spellShield"]
-  },
-  rogue: {
-    name: "Rogue",
-    stats: {
-      maxHp: 85, maxSta: 80, maxMana: 30,
-      patk: 24, matk: 10, pdef: 3, mdef: 3,
-      tatt: 0, pspd: 1.4, mspd: 0.9,
-      ccrit: 0.25, dcrit: 1.8
-    },
-    initialSkills: ["quickStrike", "evasion", "shadowStrike", "assassinate"]
-  },
-  paladin: {
-    name: "Paladin",
-    stats: {
-      maxHp: 150, maxSta: 70, maxMana: 50,
-      patk: 16, matk: 12, pdef: 10, mdef: 10,
-      tatt: 0, pspd: 0.85, mspd: 0.95,
-      ccrit: 0.12, dcrit: 1.4
-    },
-    initialSkills: ["holyStrike", "divineTaunt", "sanctuaryAura", "redemption"]
-  },
-  archer: {
-    name: "Archer",
-    stats: {
-      maxHp: 95, maxSta: 75, maxMana: 40,
-      patk: 22, matk: 11, pdef: 4, mdef: 4,
-      tatt: 0, pspd: 1.15, mspd: 1.0,
-      ccrit: 0.20, dcrit: 1.6
-    },
-    initialSkills: ["preciseShot", "multiShot", "powerShot", "evasionShot"]
-  }
-};
-
-// ===== HERO INITIALIZATION =====
-let heroes = [];
-
-function initializeHeroes() {
-  heroes = [];
-  for (let heroKey in HERO_TEMPLATES) {
-    let template = HERO_TEMPLATES[heroKey];
-    let hero = new Character(template.name, template.stats, "A", []);
-    
-    // Initialize active skills (add them to the skillbar if available)
-    let skillNames = template.initialSkills;
-    let skillsToAdd = [];
-    for (let skillName of skillNames) {
-      if (Skills[skillName]) {
-        skillsToAdd.push(Skills[skillName]);
-      }
-    }
-    hero.setActiveSkills(skillsToAdd);
-    heroes.push(hero);
-  }
-  return heroes;
-}
-
-// Auto-initialize heroes when script loads
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', initializeHeroes);
-}
+// ===== CHARACTERS =====
+const heroes = [
+  new Character("Knight", {
+    hp: 130, sta: 100, mana: 30,
+    patk: 18, matk: 8, tatt: 2,
+    pdef: 10, mdef: 5,
+    pspd: 0.9, mspd: 0.5,
+    ccrit: 0.15, dcrit: 1.5
+  }, "A", [
+    Skills.knightSlash,
+    Skills.shieldBarrier,
+  ]),
+  
+  new Character("Priest", {
+    hp: 90, sta: 60, mana: 150,
+    patk: 10, matk: 16, tatt: 0,
+    pdef: 5, mdef: 12,
+    pspd: 0.6, mspd: 1.1,
+    ccrit: 0.08, dcrit: 1.3
+  }, "A", [
+    Skills.holyHeal,
+    Skills.resurrect,
+  ]),
+  
+  new Character("Mage", {
+    hp: 80, sta: 50, mana: 180,
+    patk: 6, matk: 26, tatt: 1,
+    pdef: 3, mdef: 14,
+    pspd: 0.5, mspd: 1.2,
+    ccrit: 0.12, dcrit: 1.8
+  }, "A", [
+    Skills.inferno,
+    Skills.lightingStrike,
+  ]),
+  
+  new Character("Rogue", {
+    hp: 85, sta: 120, mana: 40,
+    patk: 22, matk: 10, tatt: 3,
+    pdef: 6, mdef: 4,
+    pspd: 1.4, mspd: 0.7,
+    ccrit: 0.25, dcrit: 2.0
+  }, "A", [
+    Skills.quickStrike,
+    Skills.dodge,
+  ]),
+  
+  new Character("Paladin", {
+    hp: 140, sta: 110, mana: 50,
+    patk: 16, matk: 10, tatt: 4,
+    pdef: 14, mdef: 8,
+    pspd: 0.85, mspd: 0.6,
+    ccrit: 0.12, dcrit: 1.6
+  }, "A", [
+    Skills.heavySwing,
+    Skills.taunt,
+  ]),
+  
+  new Character("Archer", {
+    hp: 95, sta: 130, mana: 35,
+    patk: 20, matk: 8, tatt: 2,
+    pdef: 7, mdef: 4,
+    pspd: 1.15, mspd: 0.65,
+    ccrit: 0.20, dcrit: 1.7
+  }, "A", [
+    Skills.preciseShot,
+    Skills.heavyShot,
+  ]),
+];

@@ -3,16 +3,18 @@ perubahan besar di battlefield dari static menjadi dinamis map:
 - map nya terdiri dari 64 kotak dengan 8*8 kotak, saya sebut Placement-block.
 - tiap Placement-block bisa di isi oleh satu karakter.
 - karakter menjadi bentuk kotak mengikuti ukuran Placement-block.
-- kotak karakter (character-block) dikelilingi stroke merah yang mempresentasikan hp.
-- stroke merah mengikuti jumlah presentase hp (seperti jika hp 50% maka stroke hanya sampai setengah).
-- character-block heroes bisa di pindah ke Placement-block dengan cara di drag (hanya bisa dipindah dalam pergantian round dan area).
+- character-block (block monsters dan heroes) di isi oleh div yang menjadi indikasi hp karakter (seperti indikasi volume).
+- heroes-block heroes bisa di pindah ke Placement-block dengan cara di drag dan drop (saat di drop, tidak mereset stats karakter yang di pindah).
+- monster yang mati, monsters-block nya akan hilang saat ganti set.
+- heroes-block tetap ada di map battle saat berganti set walaupun sudah mati.
 
 battle system:
 - karakter akan menghitung jarak ke setiap target.
 - akan lebih mungkin untuk menyerang target terdekat daripada terjauh.
-- kemunculan musuh akan di random tapi terpusat di suatu bagian.
+- posisi monster-block akan muncul random tapi terpusat di suatu bagian.
 - di awal atau setiap ganti ronde, akan ada satu sisi (dari delapan mata angin) arah musuh munculnya.
 - misal dari timur, musuh akan lebih terpusat di bagian kanan (begitu juga jika tenggara, musuh akan lebih terpusat di pojok kanan bawah).
+- heroes-block tidak akan berpindah posisi (tidak seperti monster-block)
 
 Rest sistem:
 - setiap pergantian Round akan melakukan quick-rest.

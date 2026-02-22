@@ -3,61 +3,33 @@ let running = false;
 let lastTime = 0;
 let isBoss = false;
 let pendingRewards = [];
+let inRestMode = false; // Track if currently in rest mode (allows equipment/skill changes)
+let currentDifficulty = "normal"; // relax, normal, focus
+let difficultyScaling = 1; // Difficulty multiplier for monsters
 
-function applyStatus(char, delta) {
-  // Apply burn damage
-  if (char.status.burn > 0) {
-    let prevBurn = char.status.burn;
-    char.status.burn -= delta;
-    if (Math.floor(char.status.burn * 10) % 10 === 0) {
-      let dmg = char.takeDamage(3);
-      if (dmg > 0) log(`${char.name} takes burn damage (${dmg})`);
-    }
-    if (prevBurn > 0 && char.status.burn <= 0) {
-      updateStatusUI(char);
-    }
-  }
+// Settings
+let gameSettings = {
+  autoEquipSelect: false,
+  autoEquipPause: false,  // If true, don't pause during quick-rest
+  autoSkillSelect: false,
+  autoSkillPause: false   // If true, don't pause during long-rest
+};
 
-  // Apply bleeding damage
-  if (char.status.bleeding > 0) {
-    let prevBleed = char.status.bleeding;
-    char.status.bleeding -= delta;
-    if (Math.floor(char.status.bleeding * 10) % 10 === 0) {
-      let dmg = char.takeDamage(2);
-      if (dmg > 0) log(`${char.name} takes bleeding damage (${dmg})`);
-    }
-    if (prevBleed > 0 && char.status.bleeding <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Apply stun
-  if (char.status.stun > 0) {
-    char.status.stun -= delta;
-    if (char.status.stun <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Apply paralysis
-  if (char.status.paralyzed > 0) {
-    char.status.paralyzed -= delta;
-    if (char.status.paralyzed <= 0) {
-      updateStatusUI(char);
-    }
-  }
-
-  // Remove buff and restore stats
-  if (char.status.buffed > 0) {
-    char.status.buffed -= delta;
-    if (char.status.buffed <= 0) {
-      char.atk -= char.status.buffStats.atk;
-      char.def -= char.status.buffStats.def;
-      char.spd -= char.status.buffStats.spd;
-      updateStatusUI(char);
-    }
+// Load settings from localStorage
+function loadSettings() {
+  let saved = localStorage.getItem('gameSettings');
+  if (saved) {
+    gameSettings = { ...gameSettings, ...JSON.parse(saved) };
   }
 }
+
+function applyStatus(char, delta) {
+  // Use comprehensive status effects system
+  updateStatusEffects(char, delta);
+  updateStatusUI(char);
+}
+
+let lastSkillExecutionTime = 0;
 
 function loop(ts) {
   if (!running) return;
@@ -84,36 +56,118 @@ function loop(ts) {
   }
   
   if (aliveMonsters.length === 0) {
-    // Victory in this set
+    // Victory in this set - Award experience to heroes
+    monsters.forEach(monster => {
+      if (monster.expReward) {
+        // Distribute experience to all alive heroes equally
+        let heroShare = Math.floor(monster.expReward / aliveHeroes.length);
+        aliveHeroes.forEach(hero => {
+          hero.exp += heroShare;
+          log(`⭐ ${hero.name} gained ${heroShare} EXP from ${monster.name}`);
+        });
+      }
+    });
+    
     running = false;
     currentSet++;
     
-    // Check if round complete (3 sets per normal round, 1 set per boss round)
-    let setPerRound = isBoss ? 1 : 3;
-    if (currentSet % setPerRound === 0) {
-      // Round complete - Pause and show rewards
-      collectRoundRewards();
-    } else {
-      // Next set in same round - Continue immediately with 10% heal
-      continueNextSet();
-    }
+    // Add battle speed delay
+    setTimeout(() => {
+      // Check if round complete (3 sets per normal round, 1 set per boss round)
+      let setPerRound = isBoss ? 1 : 3;
+      if (currentSet % setPerRound === 0) {
+        // Round complete - Pause and show rewards
+        collectRoundRewards();
+      } else {
+        // Next set in same round - Continue immediately with 10% heal
+        continueNextSet();
+      }
+    }, BATTLE_CONFIG.transitionDelay);
     return;
   }
 
-  [...heroes, ...monsters].forEach((c) => {
-    if (!c.isAlive()) return;
-    applyStatus(c, delta);
-    c.cooldown -= delta;
-    if (c.cooldown <= 0 && c.status.stun <= 0) {
-      let allies = c.team === "A" ? heroes : monsters;
-      let enemies = c.team === "A" ? monsters : heroes;
-      let skill = random(c.skills);
-      skill(c, allies, enemies);
-      c.cooldown = 1 / c.spd;
-    }
-  });
+  // Apply status and execute skills with rate limiting
+  let now = performance.now();
+  if (now - lastSkillExecutionTime > BATTLE_CONFIG.skillExecutionDelay) {
+    [...heroes, ...monsters].forEach((c) => {
+      if (!c.isAlive()) return;
+      applyStatus(c, delta);
+      c.cooldown -= delta;
+      if (c.cooldown <= 0 && c.status.stun <= 0) {
+        let allies = c.team === "A" ? heroes : monsters;
+        let enemies = c.team === "A" ? monsters : heroes;
+        let skill = random(c.skills);
+        if (skill && skill.effect) {
+          skill.effect(c, allies, enemies);
+        }
+        c.cooldown = 1 / c.pspd; // Use physical speed as base
+        lastSkillExecutionTime = now;
+      }
+    });
+  } else {
+    // Apply status effects even if skills aren't executing
+    [...heroes, ...monsters].forEach((c) => {
+      if (!c.isAlive()) return;
+      applyStatus(c, delta);
+      c.cooldown -= delta;
+    });
+  }
   
   requestAnimationFrame(loop);
+}
+
+// ===== REST SYSTEM =====
+function updateRestModeIndicator() {
+  const indicator = document.getElementById("rest-mode-indicator");
+  if (indicator) {
+    if (inRestMode) {
+      indicator.style.display = "block";
+    } else {
+      indicator.style.display = "none";
+    }
+  }
+}
+
+function quickRest(heroTeam, setNumber) {
+  // Quick rest: 25% HP + 2*set, and 30% + 3*set for Sta/Mana
+  let hpHeal = Math.floor(heroTeam[0].maxHp * 0.25) + (2 * setNumber);
+  let staRestore = 0;
+  let manaRestore = 0;
+  
+  heroTeam.forEach(h => {
+    // Heal HP
+    h.hp += hpHeal;
+    if (h.hp > h.maxHp) h.hp = h.maxHp;
+    
+    // Restore Stamina
+    staRestore = Math.floor(h.maxSta * 0.30) + (3 * setNumber);
+    h.sta += staRestore;
+    if (h.sta > h.maxSta) h.sta = h.maxSta;
+    
+    // Restore Mana
+    manaRestore = Math.floor(h.maxMana * 0.30) + (3 * setNumber);
+    h.mana += manaRestore;
+    if (h.mana > h.maxMana) h.mana = h.maxMana;
+    
+    log(`✨ ${h.name}: +${hpHeal} HP, +${staRestore} Sta, +${manaRestore} Mana`);
+    updateUI(h);
+  });
+}
+
+function longRest(heroTeam) {
+  // Long rest: Full heal and clear all negative effects
+  heroTeam.forEach(h => {
+    // Heal to full
+    h.hp = h.maxHp;
+    h.sta = h.maxSta;
+    h.mana = h.maxMana;
+    
+    // Clear all negative effects
+    clearAllStatuses(h);
+    
+    log(`⭐ ${h.name}: Fully healed and all negative effects cleared!`);
+    updateUI(h);
+  });
 }
 
 function collectRoundRewards() {
@@ -124,18 +178,24 @@ function collectRoundRewards() {
   pendingRewards = [];
   
   if (isBoss) {
+    let expReward = 40 + currentArea * 10;
     let spPoints = 15 + currentArea * 5;
     heroes.forEach(h => {
       if (!h.statsPoints) h.statsPoints = 0;
       h.statsPoints += spPoints;
+      h.exp += expReward;
     });
+    rewardText += `+${expReward} EXP untuk setiap hero!\n`;
     rewardText += `+${spPoints} Stat Points untuk setiap hero! (BOSS REWARD)\n`;
   } else {
+    let expReward = 15 + currentSet * 3;
     let spPoints = 5 + currentSet * 2;
     heroes.forEach(h => {
       if (!h.statsPoints) h.statsPoints = 0;
       h.statsPoints += spPoints;
+      h.exp += expReward;
     });
+    rewardText += `+${expReward} EXP untuk setiap hero!\n`;
     rewardText += `+${spPoints} Stat Points untuk setiap hero!\n`;
   }
   
@@ -154,44 +214,53 @@ function collectRoundRewards() {
 function showRoundTransition(rewardText) {
   isRoundPaused = true;
   isPaused = true;
+  inRestMode = true; // Enable equipment/skill changes
+  updateRestModeIndicator();
   
   // Check if area complete (boss round is the 4th round)
   if (isBoss) {
     // Area complete
     showAreaTransition(rewardText);
   } else {
-    // Just round transition
-    document.getElementById("transition-title").textContent = `🎊 Round ${currentRound + 1} Complete!`;
-    document.getElementById("reward-text").textContent = rewardText + "\nHealing 25% HP and clearing negative status...";
+    // Just round transition - Apply quick rest
+    quickRest(heroes, currentSet);
     
-    let rewardHtml = pendingRewards.map(r => `<div class="reward-item"><div class="reward-item-name">${r}</div></div>`).join("");
-    document.getElementById("reward-items").innerHTML = rewardHtml;
+    let title = `🎊 Round ${currentRound + 1} Complete!`;
+    let text = rewardText + "\n\n🌙 Quick Rest: Stamina and Mana partially restored!";
     
-    document.getElementById("transition-modal").classList.add("active");
+    // Check if should skip UI due to auto-selection
+    if (gameSettings.autoEquipSelect && gameSettings.autoSkillSelect && gameSettings.autoEquipPause) {
+      // Skip choice UI, auto-apply and continue
+      autoApplyTransitionChoices();
+      continueFromTransition();
+    } else {
+      // Show choice UI in profile
+      openProfile(0); // Open profile UI first
+      showTransitionChoices(title, text);
+    }
   }
 }
 
 function showAreaTransition(rewardText) {
-  // Skill learning on area transition
-  let skillRewards = [];
-  let heroPromise = Math.floor(Math.random() * 2) + 1; // 1-2 heroes
-  for (let i = 0; i < heroPromise; i++) {
-    let hero = random(heroes);
-    let skillObj = getRandomSkillForHero(hero.name);
-    if (skillObj && !hero.skills.includes(skillObj.skill)) {
-      hero.skills.push(skillObj.skill);
-      skillRewards.push(`${hero.name} learned ${skillObj.name}!`);
-    }
+  inRestMode = true; // Enable equipment/skill changes
+  updateRestModeIndicator();
+  
+  // Apply long rest
+  longRest(heroes);
+  
+  let title = `🌟 Area ${currentArea + 1} Complete!`;
+  let fullText = rewardText + "\n\n🛏️ Long Rest: Fully healed and all negative effects cleared!";
+  
+  // Check if should skip UI due to auto-selection
+  if (gameSettings.autoEquipSelect && gameSettings.autoSkillSelect && gameSettings.autoSkillPause) {
+    // Skip choice UI, auto-apply and continue
+    autoApplyTransitionChoices();
+    continueFromTransition();
+  } else {
+    // Show choice UI in profile
+    openProfile(0); // Open profile UI first
+    showTransitionChoices(title, fullText);
   }
-  
-  document.getElementById("transition-title").textContent = `🌟 Area ${currentArea + 1} Complete!`;
-  let fullText = rewardText + "\n\n📚 New Skills Learned:\n" + skillRewards.join("\n") + "\n\nHealing 100% HP and clearing all negative effects...";
-  document.getElementById("reward-text").textContent = fullText;
-  
-  let rewardHtml = (pendingRewards.concat(skillRewards)).map(r => `<div class="reward-item"><div class="reward-item-name">${r}</div></div>`).join("");
-  document.getElementById("reward-items").innerHTML = rewardHtml;
-  
-  document.getElementById("transition-modal").classList.add("active");
 }
 
 function continueNextSet() {
@@ -200,6 +269,14 @@ function continueNextSet() {
     h.hp = Math.floor(h.maxHp * 1.1);
     if (h.hp > h.maxHp) h.hp = h.maxHp;
     updateUI(h);
+    updateGridCharacterHP(h);
+  });
+  
+  // Remove dead monsters from grid and container
+  monsters.forEach(m => {
+    if (!m.isAlive()) {
+      removeCharacterFromGrid(m);
+    }
   });
   
   // Generate new monster set
@@ -218,6 +295,19 @@ function continueNextSet() {
   
   monsters.forEach(m => createUI(m, monstersContainer));
   
+  // Keep using same spawn direction for entire round (3 sets)
+  // Direction only changes when nextRound() is called
+  monsters.forEach((m, idx) => {
+    let pos = getRandomSpawnPosition(currentSpawnDirection);
+    // Try to place, if occupied find nearby empty spot
+    let attempts = 0;
+    while (gridOccupancy[getGridKey(pos.row, pos.col)] && attempts < 3) {
+      pos = getRandomSpawnPosition(currentSpawnDirection);
+      attempts++;
+    }
+    placeCharacterOnGrid(m, pos.row, pos.col);
+  });
+  
   running = true;
   lastTime = performance.now();
   requestAnimationFrame(loop);
@@ -226,6 +316,7 @@ function continueNextSet() {
 function nextRound() {
   isRoundPaused = false;
   document.getElementById("transition-modal").classList.remove("active");
+  inRestMode = false; // Exit rest mode
   
   // Check if area transition
   if (isBoss) {
@@ -235,22 +326,9 @@ function nextRound() {
     currentSet = 0;
     isBoss = false;
     
-    // Heal 100% and clear all status
-    heroes.forEach(h => {
-      h.hp = h.maxHp;
-      h.status = { 
-        burn: 0, 
-        shield: false, 
-        bleeding: 0, 
-        stun: 0, 
-        paralyzed: 0, 
-        taunt: false, 
-        critical: 0, 
-        buffed: 0,
-        buffStats: { atk: 0, def: 0, spd: 0 }
-      };
-      updateUI(h);
-    });
+    // Set new spawn direction for next area round 1
+    currentSpawnDirection = randomSpawnDirection();
+    updateSpawnDirectionDisplay();
     
     log(`\n🌟 Starting Area ${currentArea + 1}!\n`);
   } else {
@@ -258,17 +336,9 @@ function nextRound() {
     currentRound++;
     currentSet = 0;
     
-    // Heal 25% and clear negative status
-    heroes.forEach(h => {
-      h.hp = Math.floor(h.maxHp * 0.25) + h.hp;
-      if (h.hp > h.maxHp) h.hp = h.maxHp;
-      h.status.burn = 0;
-      h.status.bleeding = 0;
-      h.status.stun = 0;
-      h.status.paralyzed = 0;
-      h.status.taunt = false;
-      updateUI(h);
-    });
+    // Set new spawn direction for new round
+    currentSpawnDirection = randomSpawnDirection();
+    updateSpawnDirectionDisplay();
     
     // Check if next is boss round
     if (currentRound === 3) {
@@ -284,7 +354,20 @@ function nextRound() {
 }
 
 function continueFromTransition() {
+  // Apply the selected equipment and skill
+  applyTransitionChoices();
+  
+  // Hide choice UI
+  document.getElementById("profile-choice-content").classList.remove("show-choices");
+  document.getElementById("profile-normal-content").style.display = "flex";
+  
+  // Close profile
+  closeProfile();
+  
+  // Resume game
   isPaused = false;
+  inRestMode = false; // Exit rest mode, battle resuming
+  updateRestModeIndicator();
   nextRound();
 }
 
@@ -322,6 +405,17 @@ function showGameOverModal() {
   document.getElementById("gameover-modal").classList.add("active");
 }
 
+function continueFromGameOver() {
+  // Just reset and start new game
+  resetGame();
+  startBattle();
+}
+
+function returnToMainMenu() {
+  resetGame();
+  document.getElementById("main-menu").classList.add("active");
+}
+
 function resetGame() {
   document.getElementById("gameover-modal").classList.remove("active");
   
@@ -337,12 +431,32 @@ function resetGame() {
   
   battleLog.innerHTML = "";
   
+  // Reset grid (clear occupancy but keep DOM)
+  gridOccupancy = {};
+  heroStartPositions = {};
+  for (let i = 0; i < GRID_TOTAL; i++) {
+    const row = Math.floor(i / GRID_SIZE);
+    const col = i % GRID_SIZE;
+    const block = document.getElementById(`grid-${row}-${col}`);
+    if (block) {
+      block.innerHTML = "";
+      block.classList.remove("occupied");
+    }
+  }
+  
   // Reset heroes
   heroes.forEach(h => {
     h.hp = h.maxHp;
-    h.atk = h.origAtk;
-    h.def = h.origDef;
-    h.spd = h.origSpd;
+    h.sta = h.maxSta;
+    h.mana = h.maxMana;
+    h.patk = h.origPatk;
+    h.matk = h.origMatk;
+    h.tatt = h.origTatt;
+    h.pdef = h.origPdef;
+    h.mdef = h.origMdef;
+    h.def = h.origPdef; // Reset generic defense to physical defense
+    h.pspd = h.origPspd;
+    h.mspd = h.origMspd;
     h.cooldown = 0;
     h.statsPoints = 0;
     h.equipment = [];
@@ -357,6 +471,8 @@ function resetGame() {
       buffed: 0,
       buffStats: { atk: 0, def: 0, spd: 0 }
     };
+    h.gridPosition = null;
+    h.gridElement = null;
     h.element.classList.remove("dead");
     updateUI(h);
   });
@@ -376,8 +492,45 @@ function updateStageInfo() {
     `Area ${currentArea + 1} (${areaName}) - Round ${currentRound + 1} (${roundType}) - Set ${currentSet + 1}${pauseIndicator}`;
 }
 
+function startGameWithDifficulty(difficulty) {
+  currentDifficulty = difficulty;
+  
+  // Apply difficulty scaling
+  if (difficulty === "relax") {
+    difficultyScaling = 0.7;  // Monsters are 30% weaker
+  } else if (difficulty === "focus") {
+    difficultyScaling = 1.5;  // Monsters are 50% stronger
+  } else {
+    difficultyScaling = 1;    // Normal difficulty
+  }
+  
+  // Store difficulty (locked after selection)
+  localStorage.setItem('currentDifficulty', difficulty);
+  
+  // Close main menu and start battle
+  document.getElementById("main-menu").classList.remove("active");
+  loadSettings();
+  startBattle();
+}
+
 function startBattle() {
   petualanganAktif = true;
+  inRestMode = false; // Exit rest mode, battle is starting
+  updateRestModeIndicator();
+  closeProfile(); // Close profile if open
+  
+  // Clear grid occupancy only (keep hero blocks visual)
+  gridOccupancy = {};
+  
+  // Restore heroes to grid from their page load positions
+  heroes.forEach(h => {
+    if (h.gridPosition) {
+      heroStartPositions[h.name] = { ...h.gridPosition };
+      // Re-occupy grid for heroes
+      const key = getGridKey(h.gridPosition.row, h.gridPosition.col);
+      gridOccupancy[key] = h;
+    }
+  });
   
   // Generate first monster set
   let areaName = getAreaName(currentArea);
@@ -385,6 +538,21 @@ function startBattle() {
   monstersContainer.innerHTML = "";
   monsters = generateMonsterTeam(currentSet, monsterTemplates);
   monsters.forEach(m => createUI(m, monstersContainer));
+  
+  // Use existing spawn direction (already set at page load)
+  log(`🧭 Musuh datang dari: ${currentSpawnDirection}`);
+  
+  // Place monsters on grid (random within spawn zone)
+  monsters.forEach((m, idx) => {
+    let pos = getRandomSpawnPosition(currentSpawnDirection);
+    // Try to place, if occupied find nearby empty spot
+    let attempts = 0;
+    while (gridOccupancy[getGridKey(pos.row, pos.col)] && attempts < 3) {
+      pos = getRandomSpawnPosition(currentSpawnDirection);
+      attempts++;
+    }
+    placeCharacterOnGrid(m, pos.row, pos.col);
+  });
   
   updateStageInfo();
   
@@ -399,9 +567,53 @@ function startBattle() {
   requestAnimationFrame(loop);
 }
 
+// Function to update spawn direction display
+function updateSpawnDirectionDisplay() {
+  const directionMap = {
+    N: "⬆️ Utara",
+    NE: "↗️ Timur Laut",
+    E: "➡️ Timur",
+    SE: "↘️ Tenggara",
+    S: "⬇️ Selatan",
+    SW: "↙️ Barat Daya",
+    W: "⬅️ Barat",
+    NW: "↖️ Barat Laut"
+  };
+  const indicator = document.getElementById("spawn-direction-indicator");
+  if (indicator) {
+    indicator.textContent = directionMap[currentSpawnDirection] || "🧭 --";
+  }
+}
+
 // Initialize on load
+loadSettings();
+initializeSettings();
 heroes.forEach(h => createUI(h, heroesContainer));
 updateStageInfo();
+initializeSpawnDirectionDisplay();
+
+// Initialize function untuk spawn direction display
+function initializeSpawnDirectionDisplay() {
+  const indicator = document.getElementById("spawn-direction-indicator");
+  if (indicator) {
+    indicator.textContent = "🧭 --";
+  }
+}
+
+// Initialize grid at page load
+initializeGrid();
+
+// Set initial spawn direction for round 1 (before battle starts)
+currentSpawnDirection = randomSpawnDirection();
+updateSpawnDirectionDisplay();
+
+// Place heroes on grid from page load
+let heroStartCols = [0, 1];
+heroes.forEach((h, idx) => {
+  let row = idx % 4;
+  let col = heroStartCols[Math.floor(idx / 4)];
+  placeCharacterOnGrid(h, row * 2, col);
+});
 
 // Setup keyboard and UI listeners
 document.addEventListener("DOMContentLoaded", () => {

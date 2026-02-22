@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Automatic Battle RPG - 3v3 Skill System</title>
     <link rel="stylesheet" href="style.css">
-    <script src="js/config.js" defer></script>
+    <script src="js/gameConfig.js" defer></script>
     <script src="js/preparation.js" defer></script>
-    <script src="js/utils.js" defer></script>
+    <script src="js/statusEffects.js" defer></script>
     <script src="js/skills.js" defer></script>
+    <script src="js/statusEffects_EXAMPLES.js" defer></script>
     <script src="js/heroes.js" defer></script>
     <script src="js/monsterTemplate.js" defer></script>
     <script src="js/equipment.js" defer></script>
@@ -16,156 +17,175 @@
     <script src="js/gameLoop.js" defer></script>
   </head>
   <body>
-    <!-- DIFFICULTY SELECTION MODAL -->
-    <div id="difficulty-modal" class="modal active">
-      <div class="modal-content difficulty-selector">
-        <h2>⚔ Select Difficulty</h2>
-        <p>Choose your challenge level. Cannot be changed later!</p>
-        <div class="difficulty-options">
-          <button class="difficulty-btn" onclick="setDifficulty('RELAX')">
-            <strong>😌 Relax</strong>
-            <small>Slow monster growth, gentle difficulty</small>
+    <!-- Main Menu -->
+    <div id="main-menu" class="main-menu active">
+      <div class="menu-content">
+        <h1>⚔️ Automatic Battle RPG</h1>
+        <p>Select Difficulty</p>
+        <div class="difficulty-buttons">
+          <button onclick="startGameWithDifficulty('relax')" class="difficulty-btn">
+            🌸 RELAX<br><small>Easier battles</small>
           </button>
-          <button class="difficulty-btn" onclick="setDifficulty('NORMAL')">
-            <strong>⚔ Normal</strong>
-            <small>Balanced gameplay experience</small>
+          <button onclick="startGameWithDifficulty('normal')" class="difficulty-btn">
+            ⚔️ NORMAL<br><small>Balanced difficulty</small>
           </button>
-          <button class="difficulty-btn" onclick="setDifficulty('FOCUS')">
-            <strong>💥 Focus</strong>
-            <small>Fast monster growth, intense challenge</small>
+          <button onclick="startGameWithDifficulty('focus')" class="difficulty-btn">
+            🔥 FOCUS<br><small>Harder battles</small>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="game-container">
-      <div class="game">
-        <h1>⚔ Area > Round > Set Battle System</h1>
-        <div id="stage-info" class="stage-info">Area 1 - Round 1 - Set 1</div>
-        
-        <div class="battlefield-container">
-          <!-- GRID BATTLEFIELD -->
-          <div id="battlefield-grid" class="battlefield-grid">
-            <div id="heroes" class="heroes-group"></div>
-            <div id="monsters" class="monsters-group"></div>
+    <!-- Battle Log Tab (Left Side) -->
+    <div id="battle-log-tab" class="battle-log-tab">
+      <button id="log-toggle-btn" class="log-toggle-btn" onclick="toggleBattleLog()">📋</button>
+      <div id="battle-log" class="log" style="display:none;"></div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel">
+      <button class="close-settings-btn" onclick="closeSettings()">✕</button>
+      <h3>⚙️ Settings</h3>
+      <div class="settings-content">
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="auto-eq-select" onchange="saveSettings()">
+            Auto-select Equipment
+          </label>
+          <small>Automatically choose equipment during transitions</small>
+          <label class="indent" id="auto-eq-pause-label" style="display:none;">
+            <input type="checkbox" id="auto-eq-pause" onchange="saveSettings()">
+            Don't pause during quick-rest
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="auto-sk-select" onchange="saveSettings()">
+            Auto-select Skill
+          </label>
+          <small>Automatically choose skill during transitions</small>
+          <label class="indent" id="auto-sk-pause-label" style="display:none;">
+            <input type="checkbox" id="auto-sk-pause" onchange="saveSettings()">
+            Don't pause during long-rest
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="game">
+      <h1>⚔ Area > Round > Set Battle System</h1>
+      <div id="stage-info" class="stage-info">Area 1 - Round 1 - Set 1</div>
+      <div id="rest-mode-indicator" class="rest-mode-indicator" style="display:none;">
+        💤 REST MODE - You can change equipment, enhance stats, or modify skills now!
+      </div>
+      <div class="battlefield">
+        <!-- Battle Map Grid 8x8 -->
+        <div class="battle-map-section">
+          <h2>Battle Map</h2>
+          <div id="spawn-direction-indicator" class="spawn-direction">🧭 --</div>
+          <div id="battle-map-grid" class="battle-map-grid"></div>
+        </div>
+        <!-- Battle Info Section -->
+        <div class="battle-info-section">
+          <div class="team heroes-section">
+            <h2>Heroes</h2>
+            <div id="heroes" class="heroes-container"></div>
+          </div>
+          <div class="team monsters-section">
+            <h2>Monsters</h2>
+            <div id="monsters" class="monsters-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="start-btn" onclick="startBattle()">Start Battle</button>
+        <button id="pause-btn" onclick="togglePause()" style="display:none;">⏸ Pause (SPACE)</button>
+        <button id="next-round-btn" style="display:none;" onclick="nextRound()">➡ Next Round</button>
+        <button id="settings-btn" class="settings-btn" onclick="openSettings()">⚙️</button>
+      </div>
+    </div>
+
+    <!-- Profile Panel at Bottom -->
+    <div id="profile-container" class="profile-container">
+      <div class="profile-header">
+        <h2 id="profile-name">Select a Hero</h2>
+        <button class="close-profile-btn" onclick="closeProfile()">✕</button>
+      </div>
+      
+      <div class="profile-content" id="profile-normal-content">
+        <!-- Left: Stats and Equipment -->
+        <div class="profile-left">
+          <!-- Stats Section -->
+          <div class="profile-section">
+            <h3>📊 Base Stats</h3>
+            <div id="profile-base-stats" class="profile-stats-grid"></div>
           </div>
           
-          <!-- BATTLE LOG SIDEBAR -->
-          <div class="battle-log-sidebar">
-            <button id="log-toggle-btn" class="log-toggle">📋</button>
-            <div id="battle-log-panel" class="battle-log-panel">
-              <div class="log-header">
-                <span>Battle Log</span>
-                <button class="log-close" onclick="toggleBattleLog()">✕</button>
-              </div>
-              <div id="battle-log" class="log"></div>
-            </div>
+          <!-- Equipment Section -->
+          <div class="profile-section">
+            <h3>⚔️ Equipment</h3>
+            <div id="profile-equipment-list" class="profile-equipment-items"></div>
           </div>
-        </div>
-
-        <div class="controls">
-          <button id="start-btn" onclick="startBattle()">Start Battle</button>
-          <button id="pause-btn" onclick="togglePause()" style="display:none;">⏸ Pause (SPACE)</button>
-          <button id="next-round-btn" style="display:none;" onclick="nextRound()">➡ Next Round</button>
-        </div>
-      </div>
-
-      <!-- PROFILE TAB (Character Stats, Equipment, Skills) -->
-      <div id="profile-tab" class="profile-tab">
-        <div class="profile-header">
-          <h3 id="profile-name">Select Hero</h3>
-          <button class="profile-close" onclick="closeProfile()">✕</button>
         </div>
         
-        <div class="profile-content">
-          <!-- STATS VIEW -->
-          <div id="stats-view" class="profile-section active">
-            <h4>📊 Stats</h4>
-            <div class="stats-grid">
-              <div class="stat-item">
-                <label>HP</label>
-                <span id="stat-hp">0</span>
-              </div>
-              <div class="stat-item">
-                <label>STA</label>
-                <span id="stat-sta">0</span>
-              </div>
-              <div class="stat-item">
-                <label>MANA</label>
-                <span id="stat-mana">0</span>
-              </div>
-              <div class="stat-item">
-                <label>PATK</label>
-                <span id="stat-patk">0</span>
-              </div>
-              <div class="stat-item">
-                <label>MATK</label>
-                <span id="stat-matk">0</span>
-              </div>
-              <div class="stat-item">
-                <label>PDEF</label>
-                <span id="stat-pdef">0</span>
-              </div>
-              <div class="stat-item">
-                <label>MDEF</label>
-                <span id="stat-mdef">0</span>
-              </div>
-              <div class="stat-item">
-                <label>CRIT</label>
-                <span id="stat-ccrit">0%</span>
-              </div>
-            </div>
-
-            <div class="buy-stats-section">
-              <h4>💰 Buy Stats (EXP: <span id="hero-exp">0</span>)</h4>
-              <div class="buy-stats-grid" id="buy-stats-grid">
-                <!-- Generated dynamically -->
-              </div>
+        <!-- Right: Skills and Buying -->
+        <div class="profile-right">
+          <!-- Skills Section -->
+          <div class="profile-section">
+            <h3>🔮 Skills</h3>
+            <div id="profile-skills-list" class="profile-skills-items"></div>
+            <div id="skill-description" class="description-panel" style="display:none;">
+              <h4 id="skill-desc-name"></h4>
+              <p id="skill-desc-text"></p>
             </div>
           </div>
-
-          <!-- EQUIPMENT VIEW -->
-          <div id="equipment-view" class="profile-section">
-            <h4>⚔ Equipment (7 Slots)</h4>
-            <div class="equipped-items" id="equipped-items">
-              <!-- Generated dynamically -->
-            </div>
-            <h4>📦 Equipment Inventory</h4>
-            <div class="equipment-inventory" id="equipment-inventory">
-              <!-- Generated dynamically -->
-            </div>
+          
+          <!-- Buy Stats Section -->
+          <div class="profile-section">
+            <h3>💰 Upgrade Stats (EXP: <span id="profile-exp">0</span>)</h3>
+            <div id="profile-buy-stats" class="profile-buy-items"></div>
           </div>
-
-          <!-- SKILLS VIEW -->
-          <div id="skills-view" class="profile-section">
-            <h4>💫 Active Skills (4 Slots)</h4>
-            <div class="active-skills" id="active-skills">
-              <!-- Generated dynamically -->
-            </div>
-            <h4>📚 Available Skills</h4>
-            <div class="available-skills" id="available-skills">
-              <!-- Generated dynamically -->
-            </div>
-          </div>
-        </div>
-
-        <!-- PROFILE SECTIONS SWITCHER -->
-        <div class="profile-tabs">
-          <button class="profile-tab-btn active" onclick="switchProfileView('stats')">📊 Stats</button>
-          <button class="profile-tab-btn" onclick="switchProfileView('equipment')">⚔ Equipment</button>
-          <button class="profile-tab-btn" onclick="switchProfileView('skills')">💫 Skills</button>
-        </div>
-      </div>
-
-      <!-- CHOICE MODALS (Equipment/Skill Rewards) -->
-      <div id="reward-choice-modal" class="modal">
-        <div class="modal-content">
-          <h2 id="choice-title"></h2>
-          <div id="choice-items" class="choice-grid">
-            <!-- Generated dynamically -->
+          
+          <!-- Item Description -->
+          <div id="item-description" class="description-panel" style="display:none;">
+            <h4 id="item-desc-name"></h4>
+            <p id="item-desc-stats"></p>
+            <p id="item-desc-ability"></p>
+            <p id="item-desc-lore"></p>
           </div>
         </div>
       </div>
+
+      <!-- Equipment & Skill Choice UI (shows during transitions) -->
+      <div class="profile-content" id="profile-choice-content" style="display:none;">
+        <!-- Transition Title -->
+        <div class="profile-section" style="grid-column: 1/-1; text-align: center;">
+          <h2 id="transition-title" style="margin: 8px 0;">Transition</h2>
+          <p id="transition-rewards" style="font-size: 10px; color: #cbd5e1; margin: 4px 0;"></p>
+        </div>
+
+        <!-- Equipment Choice -->
+        <div class="profile-section">
+          <h3>🎁 Choose Equipment</h3>
+          <div id="eq-choice-list" class="profile-equipment-items"></div>
+        </div>
+
+        <!-- Skill Choice -->
+        <div class="profile-section">
+          <h3>📚 Choose Skill</h3>
+          <div id="sk-choice-list" class="profile-skills-items"></div>
+        </div>
+
+        <!-- Continue Button -->
+        <div class="profile-section" style="grid-column: 1/-1; text-align: center; margin-top: 8px;">
+          <button onclick="continueFromTransition()" style="width: 80%; padding: 8px; font-size: 12px; background: #10b981; cursor: pointer;" id="continue-btn" disabled>
+            ➡ Continue (Select both)
+          </button>
+        </div>
+      </div>
+    </div>
+    </div>
 
       <!-- TRANSITION MODAL (Round/Area Pause) -->
       <div id="transition-modal" class="modal">
@@ -179,12 +199,14 @@
         </div>
       </div>
 
-      <!-- GAME OVER MODAL -->
-      <div id="gameover-modal" class="modal">
-        <div class="modal-content">
-          <h2>💀 GAME OVER</h2>
-          <p id="gameover-text"></p>
-          <button class="btn-continue" onclick="resetGame()">🔄 Restart</button>
+    <!-- Game Over Modal -->
+    <div id="gameover-modal" class="modal">
+      <div class="modal-content">
+        <h2>💀 GAME OVER</h2>
+        <p id="gameover-text"></p>
+        <div class="modal-buttons">
+          <button class="btn-continue" onclick="continueFromGameOver()">↻ Try Again</button>
+          <button class="btn-continue" onclick="returnToMainMenu()">🏠 Main Menu</button>
         </div>
       </div>
     </div>
